@@ -7,10 +7,12 @@ import { StatusBar } from 'expo-status-bar';
 import { Text, View } from 'react-native';
 import { Colors } from './constants/colors';
 import OnboardingScreen from './app/(auth)/OnboardinScree';
+import LoginScreen from './app/(auth)/LoginScreen';
 
 export default function App() {
   return (
-    <OnboardingScreen />
+    // <OnboardingScreen />
+    <LoginScreen />
   )
   // return (
   //   //
