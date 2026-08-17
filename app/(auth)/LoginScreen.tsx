@@ -14,8 +14,15 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
+import useMoniVoStore from '../../store/useMoniVoStore';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../navigation';
 
-export default function LoginScreen() {
+type Props = {
+    navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+};
+export default function LoginScreen({ navigation }: Props) {
+
     // state
     // usestate() creates a value and functio to update it
     // format : const[value, setValue] = useState(initialValue)
@@ -24,6 +31,7 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [passwords, setPasswords] = useState('');
     const [showPassword, setShowPassword] = useState(false);// for show/ hide password
+    const setUser = useMoniVoStore((state) => state.setUser);
 
     // Handlers
     const handleLogin = () => {
@@ -34,14 +42,20 @@ export default function LoginScreen() {
         }
         // TODO Replace this with real API call in week 6
         // for now , well just log an dpretedn the login wroked ;)
-        console.log('Login pressed with: ', email);
+
+        setUser({
+            id: 'user-1',
+            name: 'Samuel',
+            email: email,
+            createdAt: new Date().toISOString(),
+        });
         // TODO: replace with navigaion to Homescreen one navigator is set up
         // navigation.replace('HOME');
     };
 
     const handleGoToRegister = () => {
         // naviget to the Regiser Screen
-        console.log('Go to Register');
+        navigation.navigate('Register');
     };
     // UI
 

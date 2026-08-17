@@ -9,12 +9,16 @@ import { Colors } from './constants/colors';
 import OnboardingScreen from './app/(auth)/OnboardinScree';
 import LoginScreen from './app/(auth)/LoginScreen';
 import RegisterScreen from './app/(auth)/RegisterScreen';
+import AppNavigator from './app/navigation';
 
 export default function App() {
   return (
+    <AppNavigator />
+
     // <OnboardingScreen />
     // <LoginScreen />
-    <RegisterScreen />
+    // <RegisterScreen />
+
   )
   // return (
   //   //

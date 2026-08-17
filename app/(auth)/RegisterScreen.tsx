@@ -13,8 +13,14 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from "lucide-react-native";
 import { Colors } from "../../constants/colors";
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../navigation';
 
-export default function RegisterScreen() {
+type Props = {
+    navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
+};
+
+export default function RegisterScreen({ navigation }: Props) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -45,7 +51,7 @@ export default function RegisterScreen() {
         console.log('Register pressed for', { name, email, password }); ``
     };
     const handleGoToLogin = () => {
-        console.log('Go to Login pressed');
+        navigation.goBack();
     }
     return (
         <KeyboardAvoidingView
@@ -186,7 +192,6 @@ const styles = StyleSheet.create({
         color: Colors.champagne,
         letterSpacing: 2,
         marginBottom: 12,
-
         fontFamily: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive',
     },
     logoItalic: {
