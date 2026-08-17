@@ -15,11 +15,11 @@ import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import useMoniVoStore from '../../store/useMoniVoStore';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { AuthStackParamList } from '../navigation/AppNavigator';
 
 type Props = {
-    navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
+    navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
 };
 export default function LoginScreen({ navigation }: Props) {
 
@@ -54,8 +54,7 @@ export default function LoginScreen({ navigation }: Props) {
     };
 
     const handleGoToRegister = () => {
-        // naviget to the Regiser Screen
-        navigation.navigate('Register');
+        navigation.navigate('Register');  // Now this actually works!
     };
     // UI
 

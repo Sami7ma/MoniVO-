@@ -2,15 +2,10 @@
 // 3 sliding horizontal swiper that introduces the app.
 
 import React, { useRef, useState } from 'react';
-
+import { StackNavigationProp } from '@react-navigation/stack';
+import { AuthStackParamList } from '../navigation/AppNavigator';
 import {
-    View,
-    Text,
-    FlatList,
-    StyleSheet,
-    Dimensions,
-    TouchableOpacity,
-    ViewToken, // Ts type for the visible item tracking
+    View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, ViewToken, // Ts type for the visible item tracking
 } from 'react-native';
 import {
     WalletCards,
@@ -53,8 +48,11 @@ const slides = [
 // This works on every phone size automatically 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // the component
+type Props = {
+    navigation: StackNavigationProp<AuthStackParamList, 'Onboarding'>;
+};
 
-export default function OnboardingScreen() {
+export default function OnboardingScreen({ navigation }: Props) {
     // useStat tracks whid slide indes is currentls visible
     // also we use this to highl eth ecorrect do t indicator at the bottom.
     const [activeIndex, setActiveIndex] = useState(0);
@@ -72,7 +70,7 @@ export default function OnboardingScreen() {
         } else {
             // on the lasst slide -"Get Started" was pressed
             // TODO: we'll replace this alret with bavigation to loginScreen
-            console.log('Navigate to Login!');
+            navigation.navigate('Login');
         }
     };
     // Viewablitly tracking

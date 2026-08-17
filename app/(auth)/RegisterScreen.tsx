@@ -14,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from "lucide-react-native";
 import { Colors } from "../../constants/colors";
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation';
+import { AuthStackParamList } from '../navigation/AppNavigator';
 
 type Props = {
     navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
