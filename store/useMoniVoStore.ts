@@ -10,8 +10,10 @@ import type { Budget } from '../types/Budget';
 import type { Wallet } from '../types/Wallet';
 import type { User } from '../types/User';
 
+
 import { defaultCategories } from '../constants/defaultCategories';
 import { defaultWallet, dummyTransactions } from '../utils/dummyData';
+import { ThemeColors } from '../constants/theme';
 
 // 1 we define the sape of the store 
 interface MoniVoStore {
@@ -24,8 +26,6 @@ interface MoniVoStore {
 
 
     // Action (function that change data)
-
-
     setUser: (user: User | null) => void;
     addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
     // omit means a transaction bit wihtoud the id and created at fields
@@ -44,6 +44,11 @@ interface MoniVoStore {
     totalIncome: () => number;
     totalExpenses: () => number;
     transactionByCategory: () => Record<string, number>;
+    //  theme store
+
+    theme: 'light' | 'dark';
+    toggleTheme: () => void;
+
 }
 // 2. create the store
 
@@ -152,6 +157,10 @@ const useMoniVoStore = create<MoniVoStore>((set, get) => ({
                 return acc;
             }, {} as Record<string, number>);
     },
+    theme: 'light',
+    toggleTheme: () => set((state) => ({
+        theme: state.theme === 'light' ? 'dark' : 'light',
+    })),
 }));
 
 export default useMoniVoStore;

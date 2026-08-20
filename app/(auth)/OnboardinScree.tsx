@@ -14,7 +14,7 @@ import {
 } from 'lucide-react-native';
 
 import { StatusBar } from 'expo-status-bar';
-import { Colors } from '../../constants/colors';
+import useTheme from '../../hooks/useTheme';
 
 
 // SLIDE DATA
@@ -56,6 +56,8 @@ export default function OnboardingScreen({ navigation }: Props) {
     // useStat tracks whid slide indes is currentls visible
     // also we use this to highl eth ecorrect do t indicator at the bottom.
     const [activeIndex, setActiveIndex] = useState(0);
+    const colors = useTheme();
+    const styles = createStyles(colors);
     // useRef give us direft refrecn to the FLastList so we can call
     // .scrollToIndex() on it programmaticllu (when user taps "Next")
     // we start with 'null' until the component mounts and the FlatList is rendered.
@@ -93,7 +95,7 @@ export default function OnboardingScreen({ navigation }: Props) {
     const renderSlide = ({ item }: { item: typeof slides[0] }) => (
         <View style={styles.slide}>
             <item.icon size={80}
-                color={Colors.champagne}
+                color={colors.champagne}
                 strokeWidth={1.8} />
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.subtitle}>{item.subtitle}</Text>
@@ -103,7 +105,7 @@ export default function OnboardingScreen({ navigation }: Props) {
     return (
         <View style={styles.container}>
             {/* Makes the phoen status bar (time, battery)  white instead of black*/}
-            <StatusBar style="light" />
+            <StatusBar style={colors.statusBar} />
             {/* the swiper */}
             <FlatList
                 ref={flatListRef} // remote control refrence
@@ -157,10 +159,10 @@ export default function OnboardingScreen({ navigation }: Props) {
 // styles
 // Stylesheet.create() is react natives's styling system.
 //  its like css but written as js object.
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
     },
     slide: {
         width: SCREEN_WIDTH,
@@ -176,14 +178,14 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 38,
         fontWeight: 'bold',
-        color: Colors.ivory,
+        color: colors.textPrimary,
         textAlign: 'center',
         lineHeight: 45,
         marginBottom: 18,
     },
     subtitle: {
         fontSize: 16,
-        color: Colors.muted,
+        color: colors.textSecondary,
         textAlign: 'center',
         lineHeight: 25,
     },
@@ -203,14 +205,14 @@ const styles = StyleSheet.create({
     },
     dotActive: {
         width: 24,
-        backgroundColor: Colors.champagne,
+        backgroundColor: colors.champagne,
     },
     dotInactive: {
         width: 8,
-        backgroundColor: Colors.muted
+        backgroundColor: colors.textSecondary
     },
     button: {
-        backgroundColor: Colors.champagne,
+        backgroundColor: colors.champagne,
         paddingHorizontal: 55,
         paddingVertical: 16,
         borderRadius: 14,
@@ -219,7 +221,7 @@ const styles = StyleSheet.create({
 
     },
     buttonText: {
-        color: Colors.background,
+        color: colors.background,
         fontSize: 18,
         fontWeight: 'bold',
         letterSpacing: 0.5,
@@ -227,6 +229,6 @@ const styles = StyleSheet.create({
     },
     skipText: {
         fontSize: 14,
-        color: Colors.muted,
+        color: colors.textSecondary,
     }
 });

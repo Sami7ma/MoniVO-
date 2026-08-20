@@ -7,12 +7,12 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    SafeAreaView,    // Keeps content away from the notch and home bar
     FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Plus, TrendingUp, TrendingDown, Bell } from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
+import { Plus, TrendingUp, TrendingDown, Sun, Moon } from 'lucide-react-native';
+import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
 import TransactionRow from '../../components/home/TransactionRow';
 import { useRef, useState } from 'react';
@@ -30,17 +30,21 @@ export default function HomeScreen() {
     const totalBalance = useMoniVoStore((state) => state.totalBalance);
     const totalIncome = useMoniVoStore((state) => state.totalIncome);
     const totalExpenses = useMoniVoStore((state) => state.totalExpenses);
+    const toggleTheme = useMoniVoStore((state) => state.toggleTheme);
+    const theme = useMoniVoStore((state) => state.theme);
     const cardsRef = useRef<BalanceCardsRef>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [modalType, setModalType] = useState<'CREDIT' | 'DEBIT'>('DEBIT');
     // Only show the 5 most recent transactions on the home screen
     // .slice(0, 5) takes items from index 0 up to (not including) index 5
     const recentTransactions = transactions.slice(0, 5);
+    const colors = useTheme();
+    const styles = createStyles(colors);
 
+    const [pressedAction, setPressedAction] = useState<"DEBIT" | "CREDIT" | null>(null);
     // Helper: find a category by its ID
     // This is why we have categoryId on transactions — we look up the full category here
-    const getCategoryById = (id: string) =>
-        categories.find((cat) => cat.id === id);
+    const getCategoryById = (id: string) => categories.find((cat) => cat.id === id);
 
     // ── NUMBER FORMATTING ────────────────────────────────────────────────────────
     const formatMoney = (amount: number) =>
@@ -61,7 +65,7 @@ export default function HomeScreen() {
     return (
         // SafeAreaView prevents content from going under the phone's notch/home bar
         <SafeAreaView style={styles.safeArea}>
-            <StatusBar style="light" />
+            <StatusBar style={colors.statusBar} />
 
             <ScrollView
                 style={styles.scrollView}
@@ -72,13 +76,16 @@ export default function HomeScreen() {
                 {/* ── HEADER ─────────────────────────────────────────────────────── */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.greeting}>{greeting} 👋</Text>
-                        <Text style={styles.userName}>{firstName}</Text>
+                        <Text style={styles.greeting}>{greeting}
+                            <Text style={styles.userName}> {firstName}</Text>
+                        </Text>
                     </View>
 
-                    {/* Notification Bell — top right */}
-                    <TouchableOpacity style={styles.bellButton}>
-                        <Bell size={22} color={Colors.ivory} />
+                    <TouchableOpacity style={styles.bellButton} onPress={() => { toggleTheme() }}>
+                        {theme === 'dark'
+                            ? <Sun size={22} color={colors.champagne} />
+                            : <Moon size={22} color={colors.champagne} />
+                        }
                     </TouchableOpacity>
                 </View>
 
@@ -91,33 +98,67 @@ export default function HomeScreen() {
                     totalExpenses={totalExpenses()}
                 />
 
-
-
                 {/* ── ACTION BUTTONS ─────────────────────────────────────────── */}
                 <View style={styles.actionsRow}>
                     <TouchableOpacity
-                        style={styles.actionButtonExpense}
+                        style={[
+                            styles.actionButton,
+                            {
+                                borderColor:
+                                    pressedAction === "DEBIT"
+                                        ? colors.danger
+                                        : colors.danger + "45",
+                                backgroundColor:
+                                    pressedAction === "DEBIT"
+                                        ? colors.danger + "10"
+                                        : "transparent",
+                            },
+                        ]}
                         onPress={() => {
                             cardsRef.current?.scrollToExpense();
                             setModalType('DEBIT');
                             setModalVisible(true);
                         }}
+                        onPressIn={() => setPressedAction("DEBIT")}
+                        onPressOut={() => setPressedAction(null)}
+                        activeOpacity={0.9}
                     >
-                        <Plus size={18} color={Colors.background} />
-                        <Text style={styles.actionButtonText}>Add Expense</Text>
+                        <Plus size={18} color={colors.danger} />
+                        <Text style={styles.actionButtonExpenseText}>
+                            Add Expense
+                        </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.actionButtonIncome}
+                        style={[
+                            styles.actionButton,
+                            {
+                                borderColor:
+                                    pressedAction === "CREDIT"
+                                        ? colors.success
+                                        : colors.success + "45",
+                                backgroundColor:
+                                    pressedAction === "CREDIT"
+                                        ? colors.success + "10"
+                                        : "transparent",
+                            },
+                        ]}
                         onPress={() => {
                             cardsRef.current?.scrollToIncome();
-                            setModalType('CREDIT');
+                            setModalType("CREDIT");
                             setModalVisible(true);
+                            setPressedAction(null);
                         }}
+                        onPressIn={() => setPressedAction("CREDIT")}
+                        onPressOut={() => setPressedAction(null)}
+                        activeOpacity={0.9}
                     >
-                        <Plus size={18} color={Colors.background} />
-                        <Text style={styles.actionButtonText}>Add Income</Text>
+                        <Plus size={18} color={colors.success} />
+                        <Text style={styles.actionButtonIncomeText}>
+                            Add Income
+                        </Text>
                     </TouchableOpacity>
+
                 </View>
 
                 {/* ── RECENT TRANSACTIONS ─────────────────────────────────────────── */}
@@ -164,10 +205,10 @@ export default function HomeScreen() {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
     },
     scrollView: {
         flex: 1,
@@ -181,37 +222,37 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',    // Greeting left, bell right
         alignItems: 'center',
         paddingTop: 16,
-        marginBottom: 24,
+        marginBottom: 2,
     },
     greeting: {
         fontSize: 14,
-        color: Colors.muted,
-        marginBottom: 2,
+        color: colors.textSecondary,
+        marginBottom: 1
     },
     userName: {
-        fontSize: 23,
+        fontSize: 16,
         fontWeight: 'bold',
-        color: Colors.ivory,
+        color: colors.textPrimary
     },
     bellButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Colors.surface,
+        width: 40,
+        height: 40,
+        borderRadius: 50,
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
     balanceCard: {
         backgroundColor: '#000000',
         borderRadius: 24,
-        padding: 24,
-        marginBottom: 16,
+        padding: 20,
+        marginBottom: 15,
         borderWidth: 1,
-        borderColor: Colors.subtleGold + '25',
+        borderColor: colors.subtleGold + '25',
     },
     balanceLabel: {
         fontSize: 13,
-        color: Colors.muted,
+        color: colors.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 8,
@@ -219,7 +260,7 @@ const styles = StyleSheet.create({
     balanceAmount: {
         fontSize: 36,
         fontWeight: 'bold',
-        color: Colors.champagne,         // The big gold number!
+        color: colors.champagne,         // The big gold number!
         letterSpacing: 0.5,
         marginBottom: 24,
     },
@@ -237,13 +278,13 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
         alignItems: 'center',
         justifyContent: 'center',
     },
     statLabel: {
         fontSize: 12,
-        color: Colors.muted,
+        color: colors.textSecondary,
         marginBottom: 2,
     },
     statValue: {
@@ -253,38 +294,34 @@ const styles = StyleSheet.create({
     statDivider: {
         width: 1,
         height: 40,
-        backgroundColor: Colors.muted + '30',
+        backgroundColor: colors.textSecondary + '30',
         marginHorizontal: 16,
     },
     actionsRow: {
         flexDirection: 'row',
-        gap: 12,
-        marginBottom: 28,
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
-    actionButtonExpense: {
+    actionButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: '#EF5350',      // Red for expense
         borderRadius: 14,
-        paddingVertical: 14,
+        paddingVertical: 13,
+
     },
-    actionButtonIncome: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        backgroundColor: '#4CAF50',      // Green for income
-        borderRadius: 14,
-        paddingVertical: 14,
-    },
-    actionButtonText: {
-        color: Colors.background,
+    actionButtonExpenseText: {
+        color: colors.danger,
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '600',
+    },
+
+    actionButtonIncomeText: {
+        color: colors.success,
+        fontSize: 14,
+        fontWeight: '600',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -295,11 +332,11 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: Colors.ivory,
+        color: colors.textPrimary,
     },
     seeAll: {
         fontSize: 14,
-        color: Colors.champagne,
+        color: colors.champagne,
         fontWeight: '500',
     },
     emptyState: {
@@ -314,11 +351,11 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: Colors.ivory,
+        color: colors.textPrimary,
     },
     emptySubtitle: {
         fontSize: 14,
-        color: Colors.muted,
+        color: colors.textSecondary,
         textAlign: 'center',
     },
 });

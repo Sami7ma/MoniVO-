@@ -8,7 +8,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, ArrowLeftRight, PiggyBank, BarChart3 } from 'lucide-react-native';
 
-import { Colors } from '../../constants/colors';
+import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
 
 // Import all screens
@@ -45,11 +45,13 @@ const AppTabs = createBottomTabNavigator<AppTabParamList>();
 // AUTH STACK — shown when user is NOT logged in
 // ─────────────────────────────────────────────────────────────────────────────
 function AuthNavigator() {
+    const colors = useTheme();
+
     return (
         <AuthStack.Navigator
             screenOptions={{
                 headerShown: false,  // We design our own headers — hide the default one
-                cardStyle: { backgroundColor: Colors.background },
+                cardStyle: { backgroundColor: colors.background },
                 // cardStyle sets the background color during transitions
             }}
         >
@@ -65,19 +67,21 @@ function AuthNavigator() {
 // APP TABS — shown when user IS logged in
 // ─────────────────────────────────────────────────────────────────────────────
 function AppTabNavigator() {
+    const colors = useTheme();
+
     return (
         <AppTabs.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: Colors.surface,    // #121A28 dark card color
-                    borderTopColor: Colors.subtleGold + '20', // Very subtle gold top border
+                    backgroundColor: colors.surface,
+                    borderTopColor: colors.border,
                     borderTopWidth: 1,
                     height: 64,
                     paddingBottom: 8,
                 },
-                tabBarActiveTintColor: Colors.champagne,    // Gold for selected tab
-                tabBarInactiveTintColor: Colors.muted,      // Gray for unselected tabs
+                tabBarActiveTintColor: colors.champagne,    // Gold for selected tab
+                tabBarInactiveTintColor: colors.textSecondary,      // Gray for unselected tabs
                 tabBarLabelStyle: {
                     fontSize: 11,
                     fontWeight: '500',

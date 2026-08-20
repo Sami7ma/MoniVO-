@@ -4,8 +4,13 @@
 // Later, we'll replace the content here with our Navigator (all the screens).
 import './global.css';
 import AppNavigator from './app/navigation/AppNavigator';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 export default function App() {
-  return <AppNavigator />;
+  return (
+    <SafeAreaProvider>
+      <AppNavigator />
+    </SafeAreaProvider>
+  );
 }
 // return (
 //   //

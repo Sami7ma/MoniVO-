@@ -1,391 +1,1026 @@
-// the form modal for addin a new expense or income
-import React, { useEffect, useState } from "react";
+// components/modals/AddTransactionModal.tsx
+//
+// MoniVo — Add Income / Add Expense modal
+//
+// Design:
+// - Floating glassmorphism card
+// - Centered on screen
+// - HomeScreen remains visible behind it
+// - Theme-aware using useTheme()
+// - No hardcoded Colors import
+// - Dark/light mode supported
+// - Expense = danger
+// - Income = success
+// - Champagne/gold used for MoniVo accents
+//
+
+import React, { useEffect, useState } from 'react';
+
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Modal,          // Built-in React Native overlay component
+    Modal,
     ScrollView,
     KeyboardAvoidingView,
     Platform,
     Dimensions,
+    Pressable,
 } from 'react-native';
-import { X, ChevronDown, Check, Scroll, Touchpad } from 'lucide-react-native';
-import { Colors } from "../../constants/colors";
-import { Transaction } from "../../types/Transaction";
-import useMoniVoStore from "../../store/useMoniVoStore";
-import { CurrentRenderContext } from "@react-navigation/native";
+
+import {
+    X,
+    ChevronDown,
+    Check,
+} from 'lucide-react-native';
+
+import { Transaction } from '../../types/Transaction';
+import useMoniVoStore from '../../store/useMoniVoStore';
+import useTheme from '../../hooks/useTheme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Props
+// PROPS
 
 interface AddTransactionModalProps {
-    visible: boolean; // contros where the modal is shown
-    onClose: () => void; // called when user tops X or bacdrop or done
-    defaultType: 'CREDIT' | 'DEBIT'; // is it an expense or income
-    // onSubmit: (transaction: Transaction) => void; // called when user taps "Add Transaction"
+    visible: boolean;
+    onClose: () => void;
+    defaultType: 'CREDIT' | 'DEBIT';
 }
+
+// COMPONENT
+
 export default function AddTransactionModal({
     visible,
     onClose,
     defaultType,
 }: AddTransactionModalProps) {
-    // form state
-    const [type, setType] = useState<'CREDIT' | 'DEBIT'>(defaultType);
-    const [amount, setAmount] = useState('');
-    const [note, setNote] = useState('');
-    const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-    const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-    // ZUstand
-    // explain what is happein in her
-    const categories = useMoniVoStore((state) => state.categories);
-    const addTransaction = useMoniVoStore((state) => state.addTransaction);
-    const wallets = useMoniVoStore((state) => state.wallets);
-    // reset form when defaultType changes (modal)
-    React.useEffect(() => {
-        setType(defaultType);
-        setAmount('');
-        setNote('');
-        setSelectedCategoryId('');
-        setShowCategoryPicker(false);
-    }, [defaultType, visible]);
-    // find teh selected category object for display
-    const selectedCategory = categories.find((c) => c.id === selectedCategoryId)
-    const filteredCategories = categories.filter((c) =>
-        type === 'DEBIT'
-            ? c.flow === 'EXPENSE'
-            : c.flow === 'INCOME'
+    // THEME
+    const colors = useTheme();
+    // Styles must be created using the current theme.
+    const styles = createStyles(colors);
+    // ZUSTAND
+    const categories = useMoniVoStore(
+        (state) => state.categories
     );
-    //submit handler
+
+    const addTransaction = useMoniVoStore(
+        (state) => state.addTransaction
+    );
+
+    const wallets = useMoniVoStore(
+        (state) => state.wallets
+    );
+
+
+    // FORM STATE
+    const [type, setType] = useState<'CREDIT' | 'DEBIT'>(
+        defaultType
+    );
+    const [amount, setAmount] = useState('');
+
+    const [note, setNote] = useState('');
+
+    const [selectedCategoryId, setSelectedCategoryId] =
+        useState<string>('');
+
+    const [showCategoryPicker, setShowCategoryPicker] =
+        useState(false);
+
+    // RESET FORM
+
+    useEffect(() => {
+        if (visible) {
+            setType(defaultType);
+            setAmount('');
+            setNote('');
+            setSelectedCategoryId('');
+            setShowCategoryPicker(false);
+        }
+    }, [defaultType, visible]);
+
+    // CATEGORY    
+
+    const selectedCategory = categories.find(
+        (category) => category.id === selectedCategoryId
+    );
+
+    const filteredCategories = categories.filter(
+        (category) =>
+            type === 'DEBIT'
+                ? category.flow === 'EXPENSE'
+                : category.flow === 'INCOME'
+    );
+
+    // SUBMIT
+
     const handleSubmit = () => {
-        // validate
+
         const numAmount = parseFloat(amount);
-        if (isNaN(numAmount) || numAmount <= 0 || !amount) {
+        // Validate amount
+        if (isNaN(numAmount) || numAmount <= 0 || !amount.trim()) {
             alert('Please enter a valid amount');
             return;
         }
+        // Validate category
         if (!selectedCategory) {
             alert('Please select a category');
             return;
         }
-        // build the transaction object mathcing our transaction type
+        const now = new Date().toISOString();
         const newTransaction: Transaction = {
-            id: `txn-${Date.now()}`,   // Simple unique ID using timestamp
+            id: `txn-${Date.now()}`,
             amount: numAmount,
-            type: type,
+            type,
             categoryId: selectedCategoryId,
-            walletId: wallets.length > 0 ? wallets[0].id : 'wallet-1',
-            date: new Date().toISOString(),
+            walletId:
+                wallets.length > 0
+                    ? wallets[0].id
+                    : 'wallet-1',
+
+            date: now,
+
             note: note.trim() || undefined,
-            createdAt: new Date().toISOString(),
-            status: 'CLEARED'
+
+            createdAt: now,
+
+            status: 'CLEARED',
         };
-        // add to Zustand stor e -t hi simpedialteu update teh HOmescren
+
+        // Add transaction to Zustand.
+        // HomeScreen automatically receives the new state.
         addTransaction(newTransaction);
 
+        // Close modal.
         onClose();
     };
 
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CURRENT TYPE COLOR
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const accentColor =
+        type === 'CREDIT'
+            ? colors.success
+            : colors.danger;
+
+
+    // ─────────────────────────────────────────────────────────────────────────
     // UI
+    // ─────────────────────────────────────────────────────────────────────────
+
     return (
         <Modal
             visible={visible}
-            animationType='slide' // slide, fade , none
-            transparent={true}
-            onRequestClose={onClose}// andorid back button
+            transparent
+            animationType="fade"
+            onRequestClose={onClose}
+            statusBarTranslucent
         >
-            <KeyboardAvoidingView
-                style={styles.overlay}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
-                <View style={styles.container}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>
-                            {type === 'CREDIT' ? 'Add Income' : 'Add Expense'}
-                        </Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <X size={22} color={Colors.ivory} />
-                        </TouchableOpacity>
-                    </View>
-                    <ScrollView contentContainerStyle={styles.form}
-                        keyboardShouldPersistTaps='handled'>
-                        {/* toggle row */}
-                        <View style={styles.toggleRow}>
-                            <TouchableOpacity
-                                style={[styles.toggleButton,
-                                type === 'DEBIT' && styles.toggleButtonActive,
-                                type === 'DEBIT' && { borderColor: '#EF5350' },
-                                ]}
-                                onPress={() => setType('DEBIT')}
-                            >
-                                <Text style={[
-                                    styles.toggleText,
-                                    type === 'DEBIT' && { color: '#EF5350' },
-                                ]}>
-                                    Expense
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.toggleButton,
-                                    type === 'CREDIT' && styles.toggleButtonActive,
-                                    type === 'CREDIT' && { borderColor: '#4CAF50' },
-                                ]}
-                                onPress={() => setType('CREDIT')}
-                            >
-                                <Text style={[
-                                    styles.toggleText,
-                                    type === 'CREDIT' && { color: '#4CAF50' },
-                                ]}>
-                                    Income
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                        {/* amount input */}
-                        <View style={styles.amountSection}>
-                            <Text style={styles.currency}>ETB</Text>
-                            <TextInput
-                                style={styles.amountInput}
-                                value={amount}
-                                onChangeText={setAmount}
-                                placeholder='0.00'
-                                placeholderTextColor={Colors.muted + '60'}
-                                keyboardType='decimal-pad'
-                                autoFocus={true}
-                            />
-                        </View>
-                        {/* Category Selector */}
-                        <View style={styles.fieldGroup}>
-                            <Text style={styles.label}>Category</Text>
-                            <TouchableOpacity
-                                style={styles.selectorButton}
-                                onPress={() => setShowCategoryPicker(!showCategoryPicker)}
-                            >
-                                <Text style={[
-                                    styles.selectorText,
-                                    !selectedCategory && { color: Colors.muted },
-                                ]}>
-                                    {selectedCategory?.name ?? 'Select a category'}
-                                </Text>
-                            </TouchableOpacity>
-                            {/* category dropdown List -shows when ShowCategorpicker is true */}
-                            {showCategoryPicker && (
-                                <View style={styles.categroryList}>
-                                    {filteredCategories.map((cat) => (
-                                        <TouchableOpacity
-                                            key={cat.id}
-                                            style={[
-                                                styles.categroryItem,
-                                                cat.id == selectedCategoryId && styles.categoryItemActive,
-                                            ]}
-                                            onPress={() => {
-                                                setSelectedCategoryId(cat.id);
-                                                setShowCategoryPicker(false); // close picker after selction
-                                            }}
-                                        >
-                                            <Text style={[
-                                                styles.categoryItemText,
-                                                cat.id === selectedCategoryId && { color: Colors.champagne },
-                                            ]}>
-                                                {cat.name}
-                                            </Text>
 
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
+            {/* Full screen modal layer */}
+            <View style={styles.modalRoot}>
 
-                            )}
-                        </View>
-                        {/* ── NOTE INPUT ──────────────────────────────────────────────── */}
-                        <View style={styles.fieldGroup}>
-                            <Text style={styles.label}>Note (Optional)</Text>
-                            <TextInput
-                                style={styles.noteInput}
-                                value={note}
-                                onChangeText={setNote}
-                                placeholder="e.g. Coffee at Tomoca"
-                                placeholderTextColor={Colors.muted}
-                                multiline={true}         // Allows multiple lines
-                                numberOfLines={2}
-                            />
-                        </View>
-                        {/* ── SUBMIT BUTTON ───────────────────────────────────────────── */}
-                        <TouchableOpacity
+                {/* Dark / glass backdrop */}
+                <Pressable
+                    style={styles.backdrop}
+                    onPress={onClose}
+                />
+
+                {/* Keyboard handling */}
+                <KeyboardAvoidingView
+                    style={styles.keyboardLayer}
+                    behavior={
+                        Platform.OS === 'ios'
+                            ? 'padding'
+                            : undefined
+                    }
+                >
+
+                    {/* ─────────────────────────────────────────────────────
+                        FLOATING GLASS CARD
+                    ───────────────────────────────────────────────────── */}
+
+                    <View
+                        style={[
+                            styles.container,
+                            {
+                                borderColor:
+                                    colors.champagne + '55',
+                            },
+                        ]}
+                    >
+
+                        {/* Inner glass highlight */}
+                        <View
+                            pointerEvents="none"
                             style={[
-                                styles.submitButton,
+                                styles.glassHighlight,
                                 {
-                                    backgroundColor: type === 'CREDIT' ? '#4CAF50' : '#EF5350',
+                                    borderColor:
+                                        colors.champagne + '18',
                                 },
                             ]}
-                            onPress={handleSubmit}
-                            activeOpacity={0.85}
+                        />
+
+
+                        {/* ───────────────────────────────────────────────
+                            HEADER
+                        ─────────────────────────────────────────────── */}
+
+                        <View style={styles.header}>
+
+                            <View>
+                                <Text style={styles.headerEyebrow}>
+                                    TRANSACTION
+                                </Text>
+
+                                <Text style={styles.headerTitle}>
+                                    {type === 'CREDIT'
+                                        ? 'Add Income'
+                                        : 'Add Expense'}
+                                </Text>
+                            </View>
+
+                            <TouchableOpacity
+                                onPress={onClose}
+                                style={[
+                                    styles.closeButton,
+                                    {
+                                        borderColor:
+                                            colors.border,
+                                    },
+                                ]}
+                                activeOpacity={0.7}
+                            >
+                                <X
+                                    size={20}
+                                    color={colors.textSecondary}
+                                    strokeWidth={2}
+                                />
+                            </TouchableOpacity>
+
+                        </View>
+
+
+                        {/* ───────────────────────────────────────────────
+                            FORM
+                        ─────────────────────────────────────────────── */}
+
+                        <ScrollView
+                            style={styles.scroll}
+                            contentContainerStyle={styles.form}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
                         >
-                            <Text style={styles.submitText}>
-                                {type === 'CREDIT' ? 'Add Income' : 'Add Expense'}
-                            </Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
-            </KeyboardAvoidingView>
+
+
+                            {/* ─────────────────────────────────────────
+                                TYPE TOGGLE
+                            ───────────────────────────────────────── */}
+
+                            <View style={styles.toggleContainer}>
+
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => {
+                                        setType('DEBIT');
+                                        setSelectedCategoryId('');
+                                    }}
+                                    style={[
+                                        styles.toggleButton,
+                                        type === 'DEBIT' && {
+                                            borderColor:
+                                                colors.danger,
+                                            backgroundColor:
+                                                colors.danger + '10',
+                                        },
+                                    ]}
+                                >
+
+                                    <View
+                                        style={[
+                                            styles.typeDot,
+                                            {
+                                                backgroundColor:
+                                                    colors.danger,
+                                            },
+                                        ]}
+                                    />
+
+                                    <Text
+                                        style={[
+                                            styles.toggleText,
+                                            {
+                                                color:
+                                                    type === 'DEBIT'
+                                                        ? colors.danger
+                                                        : colors.textSecondary,
+                                            },
+                                        ]}
+                                    >
+                                        Expense
+                                    </Text>
+
+                                </TouchableOpacity>
+
+
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => {
+                                        setType('CREDIT');
+                                        setSelectedCategoryId('');
+                                    }}
+                                    style={[
+                                        styles.toggleButton,
+                                        type === 'CREDIT' && {
+                                            borderColor:
+                                                colors.success,
+                                            backgroundColor:
+                                                colors.success + '10',
+                                        },
+                                    ]}
+                                >
+
+                                    <View
+                                        style={[
+                                            styles.typeDot,
+                                            {
+                                                backgroundColor:
+                                                    colors.success,
+                                            },
+                                        ]}
+                                    />
+
+                                    <Text
+                                        style={[
+                                            styles.toggleText,
+                                            {
+                                                color:
+                                                    type === 'CREDIT'
+                                                        ? colors.success
+                                                        : colors.textSecondary,
+                                            },
+                                        ]}
+                                    >
+                                        Income
+                                    </Text>
+
+                                </TouchableOpacity>
+
+                            </View>
+
+
+                            {/* ─────────────────────────────────────────
+                                AMOUNT
+                            ───────────────────────────────────────── */}
+
+                            <View style={styles.amountSection}>
+
+                                <Text
+                                    style={[
+                                        styles.currency,
+                                        {
+                                            color:
+                                                colors.textSecondary,
+                                        },
+                                    ]}
+                                >
+                                    ETB
+                                </Text>
+
+                                <TextInput
+                                    style={[
+                                        styles.amountInput,
+                                        {
+                                            color:
+                                                colors.champagne,
+                                        },
+                                    ]}
+                                    value={amount}
+                                    onChangeText={setAmount}
+                                    placeholder="0.00"
+                                    placeholderTextColor={
+                                        colors.textMuted + '70'
+                                    }
+                                    keyboardType="decimal-pad"
+                                    autoFocus
+                                />
+
+                            </View>
+
+
+                            {/* ─────────────────────────────────────────
+                                CATEGORY
+                            ───────────────────────────────────────── */}
+
+                            <View style={styles.fieldGroup}>
+
+                                <Text style={styles.label}>
+                                    Category
+                                </Text>
+
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    style={[
+                                        styles.selectorButton,
+                                        {
+                                            backgroundColor:
+                                                colors.surfaceAlt,
+                                            borderColor:
+                                                colors.border,
+                                        },
+                                    ]}
+                                    onPress={() =>
+                                        setShowCategoryPicker(
+                                            !showCategoryPicker
+                                        )
+                                    }
+                                >
+
+                                    <Text
+                                        style={[
+                                            styles.selectorText,
+                                            {
+                                                color:
+                                                    selectedCategory
+                                                        ? colors.textPrimary
+                                                        : colors.textMuted,
+                                            },
+                                        ]}
+                                    >
+                                        {selectedCategory?.name ??
+                                            'Select a category'}
+                                    </Text>
+
+                                    <ChevronDown
+                                        size={18}
+                                        color={
+                                            colors.textSecondary
+                                        }
+                                    />
+
+                                </TouchableOpacity>
+
+
+                                {/* Category dropdown */}
+
+                                {showCategoryPicker && (
+
+                                    <View
+                                        style={[
+                                            styles.categoryList,
+                                            {
+                                                backgroundColor:
+                                                    colors.surface,
+                                                borderColor:
+                                                    colors.border,
+                                            },
+                                        ]}
+                                    >
+
+                                        <ScrollView
+                                            nestedScrollEnabled
+                                            showsVerticalScrollIndicator={
+                                                false
+                                            }
+                                        >
+
+                                            {filteredCategories.map(
+                                                (category) => {
+
+                                                    const isSelected =
+                                                        category.id ===
+                                                        selectedCategoryId;
+
+                                                    return (
+                                                        <TouchableOpacity
+                                                            key={
+                                                                category.id
+                                                            }
+                                                            activeOpacity={
+                                                                0.7
+                                                            }
+                                                            style={[
+                                                                styles.categoryItem,
+                                                                {
+                                                                    borderBottomColor:
+                                                                        colors.border,
+                                                                    backgroundColor:
+                                                                        isSelected
+                                                                            ? colors.champagne + '12'
+                                                                            : 'transparent',
+                                                                },
+                                                            ]}
+                                                            onPress={() => {
+                                                                setSelectedCategoryId(
+                                                                    category.id
+                                                                );
+                                                                setShowCategoryPicker(
+                                                                    false
+                                                                );
+                                                            }}
+                                                        >
+
+                                                            <Text
+                                                                style={[
+                                                                    styles.categoryItemText,
+                                                                    {
+                                                                        color:
+                                                                            isSelected
+                                                                                ? colors.champagne
+                                                                                : colors.textPrimary,
+                                                                    },
+                                                                ]}
+                                                            >
+                                                                {
+                                                                    category.name
+                                                                }
+                                                            </Text>
+
+                                                            {isSelected && (
+                                                                <Check
+                                                                    size={17}
+                                                                    color={
+                                                                        colors.champagne
+                                                                    }
+                                                                />
+                                                            )}
+
+                                                        </TouchableOpacity>
+                                                    );
+                                                }
+                                            )}
+
+                                        </ScrollView>
+
+                                    </View>
+                                )}
+
+                            </View>
+
+
+                            {/* ─────────────────────────────────────────
+                                NOTE
+                            ───────────────────────────────────────── */}
+
+                            <View style={styles.fieldGroup}>
+
+                                <Text style={styles.label}>
+                                    Note
+                                    <Text
+                                        style={{
+                                            color:
+                                                colors.textMuted,
+                                        }}
+                                    >
+                                        {' '}
+                                        Optional
+                                    </Text>
+                                </Text>
+
+                                <TextInput
+                                    style={[
+                                        styles.noteInput,
+                                        {
+                                            backgroundColor:
+                                                colors.surfaceAlt,
+                                            borderColor:
+                                                colors.border,
+                                            color:
+                                                colors.textPrimary,
+                                        },
+                                    ]}
+                                    value={note}
+                                    onChangeText={setNote}
+                                    placeholder="e.g. Coffee at Tomoca"
+                                    placeholderTextColor={
+                                        colors.textMuted
+                                    }
+                                    multiline
+                                    numberOfLines={2}
+                                    textAlignVertical="top"
+                                />
+
+                            </View>
+
+
+                            {/* ─────────────────────────────────────────
+                                SUBMIT
+                            ───────────────────────────────────────── */}
+
+                            <TouchableOpacity
+                                activeOpacity={0.78}
+                                onPress={handleSubmit}
+                                style={[
+                                    styles.submitButton,
+                                    {
+                                        backgroundColor:
+                                            accentColor,
+                                        shadowColor:
+                                            accentColor,
+                                    },
+                                ]}
+                            >
+
+                                <Text style={styles.submitText}>
+                                    {type === 'CREDIT'
+                                        ? 'Add Income'
+                                        : 'Add Expense'}
+                                </Text>
+
+                            </TouchableOpacity>
+
+                        </ScrollView>
+
+                    </View>
+
+                </KeyboardAvoidingView>
+
+            </View>
+
         </Modal>
     );
 }
 
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    },
-    container: {
-        width: '100%',
-        maxHeight: '100%',
-        backgroundColor: Colors.background,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        overflow: 'hidden',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 60 : 20,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.surface,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: Colors.ivory,
-    },
-    closeButton: {
-        height: 40,
-        width: 40,
-        borderRadius: 20,
-        backgroundColor: Colors.surface,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    form: {
-        padding: 20,
-        gap: 20,
-    },
-    toggleRow: {
-        flexDirection: 'row',
-        gap: 10,
-    },
-    toggleButton: {
-        flex: 1,
-        borderRadius: 16, // pill shape
-        paddingVertical: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
-        gap: 6,
-        borderWidth: 1.5,
-        borderColor: Colors.surface,
-    },
-    toggleButtonActive: {
-        borderColor: Colors.background,
-    },
-    toggleText: {
-        fontSize: 16,
-        fontWeight: '600',
-        letterSpacing: 0.3,
-        color: Colors.muted,
-    },
-    amountSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        paddingVertical: 13,
-    },
-    currency: {
-        fontSize: 24,
-        fontWeight: '200',
-        color: Colors.muted,
-    },
-    amountInput: {
-        fontSize: 48,
-        fontWeight: 'bold',
-        color: Colors.champagne,
-        minWidth: SCREEN_WIDTH * 0.5,
-        textAlign: 'center',
-    },
-    fieldGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 14,
-        color: Colors.muted,
-        fontWeight: '500',
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
-    },
-    selectorButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: Colors.surface,
-        paddingHorizontal: 16,
-        borderRadius: 12,
-        paddingVertical: 12,
-        borderWidth: 1,
-        borderColor: Colors.subtleGold + '30',
-    },
-    selectorText: {
-        fontSize: 16,
-        color: Colors.ivory,
-    },
-    categroryList: {
-        backgroundColor: Colors.surface,
-        borderRadius: 12,
-        marginTop: 8,
-        borderWidth: 1,
-        borderColor: Colors.subtleGold + '20',
-        maxHeight: 200,
-    },
-    categroryItem: {
-        paddingVertical: 14,
-        paddingHorizontal: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.subtleGold + '15',
-    },
-    categoryItemActive: {
-        backgroundColor: Colors.subtleGold + '10',
-    },
-    categoryItemText: {
-        fontSize: 16,
-        color: Colors.ivory,
-    },
-    noteInput: {
-        backgroundColor: Colors.surface,
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 15,
-        color: Colors.ivory,
-        borderColor: Colors.subtleGold + '20',
-        borderWidth: 1,
-        textAlignVertical: 'top',
-        minHeight: 75,
-    },
-    submitButton: {
-        borderRadius: 13,
-        paddingVertical: 16,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    submitText: {
-        color: '#ffffff',
-        fontSize: 16,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
-});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+const createStyles = (colors: ReturnType<typeof useTheme>) =>
+    StyleSheet.create({
+
+        // Full screen transparent modal.
+        modalRoot: {
+            flex: 1,
+        },
+
+        // This is what keeps HomeScreen visible behind
+        // the floating form.
+        backdrop: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: colors.overlay,
+        },
+
+        // Centers the floating form.
+        keyboardLayer: {
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 24,
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // GLASS CARD
+        // ─────────────────────────────────────────────────────────────────
+
+        container: {
+            width: '100%',
+            maxWidth: 500,
+
+            // Important:
+            // Do NOT use height: 85%.
+            // That was part of the reason the layout was behaving badly.
+            maxHeight: '88%',
+
+            backgroundColor:
+                colors.surface + 'F2',
+
+            borderRadius: 30,
+
+            borderWidth: 1,
+
+            overflow: 'hidden',
+
+            shadowOffset: {
+                width: 0,
+                height: 15,
+            },
+
+            shadowOpacity: 0.35,
+
+            shadowRadius: 35,
+
+            elevation: 25,
+        },
+
+        // Very subtle inner glass border.
+        glassHighlight: {
+            ...StyleSheet.absoluteFillObject,
+
+            borderRadius: 30,
+
+            borderWidth: 1,
+
+            pointerEvents: 'none',
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // HEADER
+        // ─────────────────────────────────────────────────────────────────
+
+        header: {
+            flexDirection: 'row',
+
+            justifyContent: 'space-between',
+
+            alignItems: 'center',
+
+            paddingHorizontal: 22,
+
+            paddingTop: 20,
+
+            paddingBottom: 18,
+
+            borderBottomWidth: 1,
+
+            borderBottomColor:
+                colors.border,
+        },
+
+        headerEyebrow: {
+            fontSize: 10,
+
+            fontWeight: '700',
+
+            letterSpacing: 1.5,
+
+            color: colors.champagne,
+
+            marginBottom: 4,
+        },
+
+        headerTitle: {
+            fontSize: 21,
+
+            fontWeight: '700',
+
+            color: colors.textPrimary,
+
+            letterSpacing: -0.3,
+        },
+
+        closeButton: {
+            width: 38,
+
+            height: 38,
+
+            borderRadius: 19,
+
+            alignItems: 'center',
+
+            justifyContent: 'center',
+
+            backgroundColor:
+                colors.surfaceAlt,
+
+            borderWidth: 1,
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // SCROLL
+        // ─────────────────────────────────────────────────────────────────
+
+        scroll: {
+            flexGrow: 0,
+        },
+
+        form: {
+            paddingHorizontal: 20,
+
+            paddingTop: 20,
+
+            paddingBottom: 20,
+
+            gap: 18,
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // TYPE TOGGLE
+        // ─────────────────────────────────────────────────────────────────
+
+        toggleContainer: {
+            flexDirection: 'row',
+
+            gap: 10,
+        },
+
+        toggleButton: {
+            flex: 1,
+
+            minHeight: 48,
+
+            borderRadius: 15,
+
+            borderWidth: 1,
+
+            borderColor:
+                colors.border,
+
+            backgroundColor:
+                colors.surfaceAlt,
+
+            flexDirection: 'row',
+
+            alignItems: 'center',
+
+            justifyContent: 'center',
+
+            gap: 8,
+        },
+
+        typeDot: {
+            width: 7,
+
+            height: 7,
+
+            borderRadius: 4,
+        },
+
+        toggleText: {
+            fontSize: 14,
+
+            fontWeight: '600',
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // AMOUNT
+        // ─────────────────────────────────────────────────────────────────
+
+        amountSection: {
+            flexDirection: 'row',
+
+            alignItems: 'center',
+
+            justifyContent: 'center',
+
+            minHeight: 100,
+
+            gap: 8,
+        },
+
+        currency: {
+            fontSize: 17,
+
+            fontWeight: '500',
+
+            marginTop: 8,
+        },
+
+        amountInput: {
+            fontSize: 46,
+
+            fontWeight: '700',
+
+            minWidth: SCREEN_WIDTH * 0.45,
+
+            maxWidth: SCREEN_WIDTH * 0.62,
+
+            textAlign: 'center',
+
+            paddingVertical: 0,
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // FIELDS
+        // ─────────────────────────────────────────────────────────────────
+
+        fieldGroup: {
+            gap: 8,
+        },
+
+        label: {
+            fontSize: 11,
+
+            fontWeight: '700',
+
+            letterSpacing: 1,
+
+            color: colors.textSecondary,
+
+            textTransform: 'uppercase',
+        },
+
+        selectorButton: {
+            minHeight: 50,
+
+            flexDirection: 'row',
+
+            justifyContent: 'space-between',
+
+            alignItems: 'center',
+
+            paddingHorizontal: 15,
+
+            borderRadius: 14,
+
+            borderWidth: 1,
+        },
+
+        selectorText: {
+            fontSize: 15,
+
+            fontWeight: '500',
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // CATEGORY LIST
+        // ─────────────────────────────────────────────────────────────────
+
+        categoryList: {
+            maxHeight: 170,
+
+            marginTop: 6,
+
+            borderRadius: 14,
+
+            borderWidth: 1,
+
+            overflow: 'hidden',
+        },
+
+        categoryItem: {
+            minHeight: 48,
+
+            paddingHorizontal: 15,
+
+            flexDirection: 'row',
+
+            alignItems: 'center',
+
+            justifyContent: 'space-between',
+
+            borderBottomWidth: 1,
+        },
+
+        categoryItemText: {
+            fontSize: 14,
+
+            fontWeight: '500',
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // NOTE
+        // ─────────────────────────────────────────────────────────────────
+
+        noteInput: {
+            minHeight: 72,
+
+            borderRadius: 14,
+
+            borderWidth: 1,
+
+            paddingHorizontal: 15,
+
+            paddingTop: 13,
+
+            paddingBottom: 12,
+
+            fontSize: 14,
+
+            lineHeight: 20,
+        },
+
+        // ─────────────────────────────────────────────────────────────────
+        // SUBMIT
+        // ─────────────────────────────────────────────────────────────────
+
+        submitButton: {
+            minHeight: 52,
+
+            borderRadius: 15,
+
+            alignItems: 'center',
+
+            justifyContent: 'center',
+
+            marginTop: 2,
+
+            shadowOffset: {
+                width: 0,
+
+                height: 6,
+            },
+
+            shadowOpacity: 0.18,
+
+            shadowRadius: 12,
+
+            elevation: 5,
+        },
+
+        submitText: {
+            color: '#FFFFFF',
+
+            fontSize: 15,
+
+            fontWeight: '700',
+
+            letterSpacing: 0.4,
+        },
+    });

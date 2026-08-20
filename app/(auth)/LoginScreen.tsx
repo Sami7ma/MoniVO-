@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { Colors } from '../../constants/colors';
+import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
@@ -22,6 +22,8 @@ type Props = {
     navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
 };
 export default function LoginScreen({ navigation }: Props) {
+    const colors = useTheme();
+    const styles = createStyles(colors);
 
     // state
     // usestate() creates a value and functio to update it
@@ -68,7 +70,7 @@ export default function LoginScreen({ navigation }: Props) {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             {/* StatusBar  */}
-            <StatusBar style="light" />
+            <StatusBar style={colors.statusBar} />
 
             {/* ScrollView allows us to scroll if the keyboard pushes content up */}
             <ScrollView
@@ -79,7 +81,9 @@ export default function LoginScreen({ navigation }: Props) {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.logo}>Moni<Text style={styles.logoItalic}>Vo</Text></Text>
+                    <Text style={styles.logo}>
+                        Moni<Text style={styles.logoItalic}>Vo</Text>
+                    </Text>
                     <Text style={styles.tagline}>Welcome back</Text>
                     <Text style={styles.subtitle}>Sign in to your account</Text>
                 </View>
@@ -93,7 +97,7 @@ export default function LoginScreen({ navigation }: Props) {
                             value={email} // controlled: input shows what in state
                             onChangeText={setEmail}//called every keystrodk - updates state
                             placeholder="you@example.com" // shows email keyboard onphone
-                            placeholderTextColor={Colors.muted}//makes placeholer text gray
+                            placeholderTextColor={colors.textSecondary}//makes placeholer text gray
                             keyboardType="email-address" // shows emaul keyboard on phone
                             autoCapitalize="none" // prevents auto-capitalizing first letter
                             autoCorrect={false}// turns off predictive text
@@ -110,7 +114,7 @@ export default function LoginScreen({ navigation }: Props) {
                                 value={passwords}
                                 onChangeText={setPasswords}
                                 placeholder="****************"
-                                placeholderTextColor={Colors.muted}
+                                placeholderTextColor={colors.textSecondary}
                                 secureTextEntry={!showPassword} // shows dots if true, text if false
                                 // we flip it with our toggle handler
                                 autoCapitalize="none"
@@ -123,8 +127,8 @@ export default function LoginScreen({ navigation }: Props) {
                             // Tou
                             >
                                 {showPassword
-                                    ? <EyeOff size={20} color={Colors.muted} />
-                                    : <Eye size={20} color={Colors.muted} />}
+                                    ? <EyeOff size={20} color={colors.textSecondary} />
+                                    : <Eye size={20} color={colors.textSecondary} />}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -159,10 +163,10 @@ export default function LoginScreen({ navigation }: Props) {
 }
 // styles
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
     },
     scrollContent: {
         flexGrow: 1, // flexgro lets scrollviews content epan to fill space
@@ -177,22 +181,27 @@ const styles = StyleSheet.create({
     logo: {
         fontSize: 40,
         fontWeight: 'bold',
-        color: Colors.champagne,
+        color: colors.champagne,
         letterSpacing: 2,
-        marginBottom: 12,
+        fontFamily: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive',
+    },
+    logoItalic: {
+        fontStyle: 'italic',
+        fontFamily: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive',
+
     },
     tagline: {
         fontSize: 24,
         fontWeight: '600',
-        color: Colors.ivory,
+        color: colors.textPrimary,
         marginBottom: 6,
     },
     subtitle: {
         fontSize: 16,
-        color: Colors.muted,
+        color: colors.textSecondary,
     },
     card: {
-        backgroundColor: Colors.surface,
+        backgroundColor: colors.surface,
         borderRadius: 22,
         padding: 24,
         gap: 4,
@@ -202,33 +211,33 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 13,
-        color: Colors.muted,
+        color: colors.textSecondary,
         marginBottom: 8,
         fontWeight: '500',
         letterSpacing: 0.5,
         textTransform: 'uppercase'
     },
     input: {
-        backgroundColor: Colors.background,
-        color: Colors.ivory,
+        backgroundColor: colors.surfaceAlt,
+        color: colors.textPrimary,
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 15,
         borderWidth: 1,
-        borderColor: Colors.subtleGold + '30', //subtle gold botder, 30% opacity
+        borderColor: colors.border, //subtle border
     },
     passwordRow: {
         flexDirection: 'row',// input and eye icon sit side by side
         alignItems: 'center',//vertically centers the items 
-        backgroundColor: Colors.background,
+        backgroundColor: colors.surfaceAlt,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: Colors.subtleGold + '30',
+        borderColor: colors.border,
     },
     passwordInput: {
         flex: 1, // allows input to take all available space
-        color: Colors.ivory,
+        color: colors.textPrimary,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 15,
@@ -242,18 +251,18 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     forgotText: {
-        color: Colors.muted,
+        color: colors.textSecondary,
         fontSize: 14,
     },
     loginButton: {
-        backgroundColor: Colors.champagne,
+        backgroundColor: colors.champagne,
         borderRadius: 14,
         paddingVertical: 16,
         alignItems: 'center',
         marginTop: 8,
     },
     loginButtonText: {
-        color: Colors.background,   // Dark text on gold button
+        color: colors.background,   // Dark text on gold button
         fontSize: 17,
         fontWeight: 'bold',
         letterSpacing: 0.5,
@@ -264,15 +273,12 @@ const styles = StyleSheet.create({
         marginTop: 28,
     },
     registerText: {
-        color: Colors.muted,
+        color: colors.textSecondary,
         fontSize: 14,
     },
     registerLink: {
-        color: Colors.champagne,
+        color: colors.champagne,
         fontSize: 14,
         fontWeight: '600',
     },
-    logoItalic: {
-        fontStyle: 'italic',
-    }
 });

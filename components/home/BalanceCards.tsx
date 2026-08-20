@@ -1,21 +1,30 @@
+
 // components/home/BalanceCards.tsx
 // Premium swipeable MoniVo financial cards.
 // Default card: Total Balance
 // Swipe left/right: Total Income / Total Expenses
-//
-// NOTE:
-// - No WiFi/contactless icon.
-// - The entire "MoniVo" wordmark is italic.
-// - Credit-card styling is kept.
-// - Cards are slightly narrower than the screen so the neighboring cards
-//   are visible, giving the stacked/swipeable-card feeling.
-// - This component ONLY handles the cards. Your navbar, transactions,
-//   buttons, and the rest of HomeScreen stay unchanged.
 
-import React, { useRef, useState, forwardRef, useImperativeHandle, } from 'react';
-import { Nfc } from 'lucide-react-native'
-import { View, Text, FlatList, StyleSheet, Dimensions, ViewToken, Platform, } from 'react-native';
-import { Colors } from '../../constants/colors';
+import React, {
+    useRef,
+    useState,
+    forwardRef,
+    useImperativeHandle,
+} from 'react';
+
+import { Nfc } from 'lucide-react-native';
+
+import {
+    View,
+    Text,
+    FlatList,
+    StyleSheet,
+    Dimensions,
+    ViewToken,
+    Platform,
+} from 'react-native';
+
+import useTheme from '../../hooks/useTheme';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // The card is intentionally smaller than the available screen width.
@@ -24,12 +33,19 @@ const CARD_WIDTH = SCREEN_WIDTH - 64;
 const CARD_GAP = 12;
 const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// REF
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface BalanceCardsRef {
     scrollToIncome: () => void;
     scrollToExpense: () => void;
     scrollToBalance: () => void;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROPS
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface BalanceCardsProps {
     userName: string;
@@ -38,13 +54,17 @@ interface BalanceCardsProps {
     totalExpenses: number;
 }
 
-// each card has a uniqu colr schee to mathc th epremim dark or light card look
+// ─────────────────────────────────────────────────────────────────────────────
+// CARD DATA
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface CardData {
     id: string;
     type: 'income' | 'balance' | 'expense';
     label: string;
     amountColor: string;
 }
+
 const cardConfigs: CardData[] = [
     {
         id: 'income',
@@ -56,283 +76,516 @@ const cardConfigs: CardData[] = [
         id: 'balance',
         type: 'balance',
         label: 'TOTAL BALANCE',
-        amountColor: Colors.champagne,
+        amountColor: '#C8A96B',
     },
     {
         id: 'expense',
         type: 'expense',
         label: 'TOTAL EXPENSES',
-        amountColor: '#a34846ff',
+        amountColor: '#A34846',
     },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPONENT
-// forwardRef lets the parent (Homescreen) access methods ont thsi componetnt\
+// ─────────────────────────────────────────────────────────────────────────────
 
 const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
-    ({ userName, totalBalance, totalIncome, totalExpenses }, ref) => {
-        // Balance is the default card.
+    (
+        {
+            userName,
+            totalBalance,
+            totalIncome,
+            totalExpenses,
+        },
+        ref
+    ) => {
+
+        // Get the current theme from Zustand through useTheme().
+        const colors = useTheme();
 
         const flatlistRef = useRef<FlatList>(null);
-        const [activeIndex, setActiveIndex] = useState(1); // start on the balance card (middle)
-        // expose scroll methods
-        // useImpaciveHandle says: parent component can acess these methods
+
+        // Start on the Balance card in the middle.
+        const [activeIndex, setActiveIndex] = useState(1);
+
+        // ─────────────────────────────────────────────────────────────────────
+        // SCROLLING
+        // ─────────────────────────────────────────────────────────────────────
+
         const scrollToCard = (index: number) => {
             flatlistRef.current?.scrollToIndex({
                 index,
                 animated: true,
             });
         };
+
+        // Expose these methods to HomeScreen.
         useImperativeHandle(ref, () => ({
             scrollToIncome: () => scrollToCard(0),
             scrollToBalance: () => scrollToCard(1),
             scrollToExpense: () => scrollToCard(2),
         }));
-        // track which card is visible.
+
+        // ─────────────────────────────────────────────────────────────────────
+        // TRACK ACTIVE CARD
+        // ─────────────────────────────────────────────────────────────────────
+
         const onViewableItemsChanged = useRef(
-            ({ viewableItems }: { viewableItems: ViewToken[]; }) => {
+            ({
+                viewableItems,
+            }: {
+                viewableItems: ViewToken[];
+            }) => {
                 if (viewableItems.length > 0) {
-                    setActiveIndex(viewableItems[0].index ?? 1);
+                    setActiveIndex(
+                        viewableItems[0].index ?? 1
+                    );
                 }
             }
         ).current;
+
         const viewabilityConfig = useRef({
             viewAreaCoveragePercentThreshold: 60,
         }).current;
-        // get the rign amoutn for each card type
+
+        // ─────────────────────────────────────────────────────────────────────
+        // GET AMOUNT
+        // ─────────────────────────────────────────────────────────────────────
+
         const getAmount = (type: string): number => {
             if (type === 'income') return totalIncome;
             if (type === 'expense') return totalExpenses;
-            return totalBalance;
-        }
 
-        // format money nicley 
+            return totalBalance;
+        };
+
+        // ─────────────────────────────────────────────────────────────────────
+        // FORMAT MONEY
+        // ─────────────────────────────────────────────────────────────────────
+
         const formatMoney = (amount: number) =>
             `ETB ${Math.abs(amount).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
             })}`;
+
         // ─────────────────────────────────────────────────────────────────────
-        // CHIP
+        // RENDER CARD
         // ─────────────────────────────────────────────────────────────────────
 
-        // render a single Card
-        const renderCard = ({ item }: { item: CardData; }) => (
-            <View style={[
-                styles.card,
-                // i can use an image in the bakgoun for the future 
-            ]}>
-                {/* Top row: MOniVO logo + contactles icon */}
-                < View style={styles.cardTopRow} >
-                    <Text style={styles.cardLogoItalic} >
+        const renderCard = ({
+            item,
+        }: {
+            item: CardData;
+        }) => (
+
+            <View
+                style={[
+                    styles.card,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.cardBorder,
+                    },
+                ]}
+            >
+
+                {/* ─────────────────────────────────────────────────────────────
+                    TOP ROW
+                ───────────────────────────────────────────────────────────── */}
+
+                <View style={styles.cardTopRow}>
+
+                    <Text
+                        style={[
+                            styles.cardLogoItalic,
+                            {
+                                color: colors.textPrimary,
+                            },
+                        ]}
+                    >
                         MoniVo
                     </Text>
-                    {/* align right  */}
-                    <Nfc size={20} style={styles.nfcIcon} />
-                </View >
-                {/* Fake chip  */}
-                < View style={[styles.chip, { backgroundColor: "#C8A96B" }]} >
+
+                    <Nfc
+                        size={20}
+                        color={colors.champagne}
+                        style={styles.nfcIcon}
+                    />
+
+                </View>
+
+                {/* ─────────────────────────────────────────────────────────────
+                    CHIP
+                ───────────────────────────────────────────────────────────── */}
+
+                <View
+                    style={[
+                        styles.chip,
+                        {
+                            backgroundColor: colors.champagne,
+                        },
+                    ]}
+                >
                     <View style={styles.chipLines}>
-                        <View style={styles.chipLine}></View>
-                        <View style={styles.chipLine}></View>
-                        <View style={styles.chipLine}></View>
+                        <View style={styles.chipLine} />
+                        <View style={styles.chipLine} />
+                        <View style={styles.chipLine} />
                     </View>
-                </View >
-                {/* Labe + amount */}
-                < Text style={[styles.cardLabel, { color: item.amountColor }]} >
+                </View>
+
+                {/* ─────────────────────────────────────────────────────────────
+                    LABEL + AMOUNT
+                ───────────────────────────────────────────────────────────── */}
+
+                <Text
+                    style={[
+                        styles.cardLabel,
+                        {
+                            color: item.amountColor,
+                        },
+                    ]}
+                >
                     {item.label}
-                </Text >
-                <Text style={[styles.cardAmount, { color: item.amountColor }]}>
+                </Text>
+
+                <Text
+                    style={[
+                        styles.cardAmount,
+                        {
+                            color: item.amountColor,
+                        },
+                    ]}
+                >
                     {formatMoney(getAmount(item.type))}
                 </Text>
-                {/* DOr indicaors sam dors forn onoardin bus amlller this time */}
+
+                {/* ─────────────────────────────────────────────────────────────
+                    CARD NUMBER DOTS
+                ───────────────────────────────────────────────────────────── */}
+
                 <View style={styles.cardDots}>
+
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={i} style={[
-                            styles.fakeDot,
-                            { backgroundColor: Colors.muted },
-                        ]} />
+                        <View
+                            key={i}
+                            style={[
+                                styles.fakeDot,
+                                {
+                                    backgroundColor:
+                                        colors.textSecondary,
+                                },
+                            ]}
+                        />
                     ))}
+
                     <View style={{ width: 12 }} />
+
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={`b${i}`} style={[
-                            styles.fakeDot,
-                            { backgroundColor: Colors.muted },
-                        ]} />
+                        <View
+                            key={`b${i}`}
+                            style={[
+                                styles.fakeDot,
+                                {
+                                    backgroundColor:
+                                        colors.textSecondary,
+                                },
+                            ]}
+                        />
                     ))}
+
                     <View style={{ width: 12 }} />
+
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={`c${i}`} style={[
-                            styles.fakeDot,
-                            { backgroundColor: Colors.muted },
-                        ]} />
+                        <View
+                            key={`c${i}`}
+                            style={[
+                                styles.fakeDot,
+                                {
+                                    backgroundColor:
+                                        colors.textSecondary,
+                                },
+                            ]}
+                        />
                     ))}
+
                     <View style={{ width: 12 }} />
+
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={`d${i}`} style={[
-                            styles.fakeDot,
-                            { backgroundColor: Colors.muted },
-                        ]} />
+                        <View
+                            key={`d${i}`}
+                            style={[
+                                styles.fakeDot,
+                                {
+                                    backgroundColor:
+                                        colors.textSecondary,
+                                },
+                            ]}
+                        />
                     ))}
+
                 </View>
 
-                {/* bottom rowL name + Monivo logo */}
+                {/* ─────────────────────────────────────────────────────────────
+                    BOTTOM ROW
+                ───────────────────────────────────────────────────────────── */}
+
                 <View style={styles.cardBottomRow}>
-                    <Text style={[styles.cardHolder, { color: '#ffffff' }]}>
+
+                    <Text
+                        style={[
+                            styles.cardHolder,
+                            {
+                                color: colors.textPrimary,
+                            },
+                        ]}
+                    >
                         {userName}
                     </Text>
-                    <Text style={styles.cardBrand}>
+
+                    <Text
+                        style={[
+                            styles.cardBrand,
+                            {
+                                color: colors.champagne,
+                            },
+                        ]}
+                    >
                         MONIVO
                     </Text>
-                </View>
-            </View >
 
+                </View>
+
+            </View>
         );
+
+        // ─────────────────────────────────────────────────────────────────────
+        // RETURN
+        // ─────────────────────────────────────────────────────────────────────
+
         return (
             <View>
-                {/* flatlist is going to hold all the cards, slide left/right to switch between Income, Balance, Expense */}
+
                 <FlatList
                     ref={flatlistRef}
                     data={cardConfigs}
                     renderItem={renderCard}
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    onViewableItemsChanged={onViewableItemsChanged}
-                    initialScrollIndex={1} // start on teh balacne card
+                    onViewableItemsChanged={
+                        onViewableItemsChanged
+                    }
+                    viewabilityConfig={viewabilityConfig}
+                    initialScrollIndex={1}
+
                     getItemLayout={(_, index) => ({
-                        // tell floatlist exactl how sien eac ite is 
-                        // required for intial scrol indec to work 
                         length: SNAP_INTERVAL,
                         offset: index * SNAP_INTERVAL,
                         index,
                     })}
+
                     snapToInterval={SNAP_INTERVAL}
                     decelerationRate="fast"
-                    contentContainerStyle={{ paddingHorizontal: 0 }}
+
+                    contentContainerStyle={{
+                        paddingHorizontal: 0,
+                    }}
                 />
-                {/* dot indicaros below the cards  */}
+
+                {/* ─────────────────────────────────────────────────────────────
+                    CARD INDICATORS
+                ───────────────────────────────────────────────────────────── */}
+
                 <View style={styles.dotsRow}>
+
                     {cardConfigs.map((_, i) => (
-                        <View key={i} style={
-                            [styles.dots,
-                            i === activeIndex ? styles.dotActive : styles.dotInactive]}
+                        <View
+                            key={i}
+                            style={[
+                                styles.dots,
+                                i === activeIndex
+                                    ? [
+                                        styles.dotActive,
+                                        {
+                                            backgroundColor:
+                                                colors.champagne,
+                                        },
+                                    ]
+                                    : [
+                                        styles.dotInactive,
+                                        {
+                                            backgroundColor:
+                                                colors.textMuted +
+                                                '30',
+                                        },
+                                    ],
+                            ]}
                         />
                     ))}
+
                 </View>
-            </View >
+
+            </View>
         );
     }
 );
+
 export default BalanceCards;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
+
     card: {
         width: CARD_WIDTH,
         aspectRatio: 2,
+
         borderRadius: 18,
         marginRight: CARD_GAP,
-        padding: 20,
-        justifyContent: 'space-between',
-        backgroundColor: '#000',
-        borderWidth: 0.2,
-        borderColor: '#fff',
+
         paddingHorizontal: 10,
         paddingVertical: 10,
+
+        justifyContent: 'space-between',
+
+        borderWidth: 1,
+
+        // Subtle shadow
+        shadowColor: '#000',
+
+        shadowOffset: {
+            width: 2,
+            height: 4,
+        },
+
+        shadowOpacity: 0.12,
+        shadowRadius: 5,
+
+        elevation: 3,
     },
+
     cardTopRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    cardLogo: {
-        fontWeight: '500',
-        color: Colors.champagne,
-        letterSpacing: 1,
-    },
+
     cardLogoItalic: {
         fontStyle: 'italic',
-        fontFamily: Platform.OS === 'ios' ? 'Snell Roundhand' : 'cursive',
+
+        fontFamily:
+            Platform.OS === 'ios'
+                ? 'Snell Roundhand'
+                : 'cursive',
+
         fontSize: 28,
         fontWeight: '500',
-        color: 'white',
     },
+
     chip: {
         marginTop: 5,
+
         width: 40,
         height: 24,
+
         borderRadius: 6,
+
         justifyContent: 'center',
+
         opacity: 0.9,
     },
+
     chipLines: {
         flex: 1,
         justifyContent: 'space-around',
-
     },
+
     chipLine: {
         height: 2,
         borderRadius: 1,
     },
+
     cardLabel: {
         fontSize: 11,
         letterSpacing: 2,
         fontWeight: '600',
-        marginTop: 8
+        marginTop: 8,
     },
+
     cardAmount: {
         marginTop: 1,
+
         fontSize: 15,
         fontWeight: 'bold',
+
         letterSpacing: 0.5,
     },
+
     cardDots: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
     },
+
     fakeDot: {
         width: 8,
         height: 9,
+
         borderRadius: 4,
+
         marginTop: 4,
         marginBottom: 4,
     },
+
     cardBottomRow: {
         flexDirection: 'row',
+
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+
     cardHolder: {
         fontSize: 13,
+
         letterSpacing: 0.7,
+
         fontWeight: '500',
     },
+
     cardBrand: {
-        color: '#ffffff',
+        fontWeight: '600',
+        letterSpacing: 1,
     },
+
     dotsRow: {
         flexDirection: 'row',
+
         gap: 6,
+
         justifyContent: 'center',
-        marginTop: 10,
         alignItems: 'center',
+
+        marginTop: 10,
         marginBottom: 8,
     },
+
     dots: {
         height: 6,
         borderRadius: 3,
-
     },
+
     dotActive: {
         width: 25,
-        backgroundColor: Colors.champagne,
     },
+
     dotInactive: {
         width: 6,
-        backgroundColor: Colors.muted + '30',
     },
+
     nfcIcon: {
         position: 'absolute',
         right: 0,
-        color: Colors.champagne,
     },
 });
