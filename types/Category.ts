@@ -1,7 +1,7 @@
 
 // Defines what a spending/income category looks like.
 // This type can ONLY be 'expense' or 'income' — nothing else
-export type CategoryFlow = 'expense' | 'income';
+export type CategoryFlow = 'EXPENSE' | 'INCOME';
 
 export interface Category {
     id: string;              // Unique ID like 'cat-1'

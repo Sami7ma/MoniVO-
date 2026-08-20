@@ -1,6 +1,5 @@
 // app/(app)/HomeScreen.tsx
 // The main dashboard — the first screen users see after logging in.
-
 import React from 'react';
 import {
     View,
@@ -16,8 +15,9 @@ import { Plus, TrendingUp, TrendingDown, Bell } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import useMoniVoStore from '../../store/useMoniVoStore';
 import TransactionRow from '../../components/home/TransactionRow';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import BalanceCards, { BalanceCardsRef } from '../../components/home/BalanceCards';
+import AddTransactionModal from '../../components/modals/AddTransactionModal';
 
 
 export default function HomeScreen() {
@@ -31,6 +31,8 @@ export default function HomeScreen() {
     const totalIncome = useMoniVoStore((state) => state.totalIncome);
     const totalExpenses = useMoniVoStore((state) => state.totalExpenses);
     const cardsRef = useRef<BalanceCardsRef>(null);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalType, setModalType] = useState<'CREDIT' | 'DEBIT'>('DEBIT');
     // Only show the 5 most recent transactions on the home screen
     // .slice(0, 5) takes items from index 0 up to (not including) index 5
     const recentTransactions = transactions.slice(0, 5);
@@ -95,7 +97,11 @@ export default function HomeScreen() {
                 <View style={styles.actionsRow}>
                     <TouchableOpacity
                         style={styles.actionButtonExpense}
-                        onPress={() => cardsRef.current?.scrollToExpense()}
+                        onPress={() => {
+                            cardsRef.current?.scrollToExpense();
+                            setModalType('DEBIT');
+                            setModalVisible(true);
+                        }}
                     >
                         <Plus size={18} color={Colors.background} />
                         <Text style={styles.actionButtonText}>Add Expense</Text>
@@ -103,7 +109,11 @@ export default function HomeScreen() {
 
                     <TouchableOpacity
                         style={styles.actionButtonIncome}
-                        onPress={() => cardsRef.current?.scrollToIncome()}
+                        onPress={() => {
+                            cardsRef.current?.scrollToIncome();
+                            setModalType('CREDIT');
+                            setModalVisible(true);
+                        }}
                     >
                         <Plus size={18} color={Colors.background} />
                         <Text style={styles.actionButtonText}>Add Income</Text>
@@ -142,9 +152,16 @@ export default function HomeScreen() {
                 )}
 
             </ScrollView>
+            {/* ── ADD TRANSACTION MODAL ──────────────────────────────────── */}
+            <AddTransactionModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                defaultType={modalType}
+            />
         </SafeAreaView>
     );
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({

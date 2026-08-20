@@ -22,3 +22,4 @@ export interface Transaction {
     currentBalance?: number;      // Balance after this transaction (optional, calculated)
     createdAt: string;            // When was this record created?
 }
+
