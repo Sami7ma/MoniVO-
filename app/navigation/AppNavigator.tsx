@@ -16,6 +16,7 @@ import OnboardingScreen from '../(auth)/OnboardinScree'; // ← keep your typo f
 import LoginScreen from '../(auth)/LoginScreen';
 import RegisterScreen from '../(auth)/RegisterScreen';
 import HomeScreen from '../(app)/HomeScreen';
+import TransactionScreen from '../(app)/TransactionScreen';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPESCRIPT: Define what screens exist in each navigator
@@ -100,7 +101,7 @@ function AppTabNavigator() {
             {/* Placeholder components for tabs we haven't built yet */}
             <AppTabs.Screen
                 name="Transactions"
-                component={HomeScreen}  // ← temporary placeholder
+                component={TransactionScreen}
                 options={{ tabBarLabel: 'Transactions' }}
             />
             <AppTabs.Screen
