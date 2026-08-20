@@ -64,7 +64,10 @@ export default function HomeScreen() {
     // ── UI ──────────────────────────────────────────────────────────────────────
     return (
         // SafeAreaView prevents content from going under the phone's notch/home bar
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView
+            style={styles.safeArea}
+            edges={['top', 'left', 'right']}
+        >
             <StatusBar style={colors.statusBar} />
 
             <ScrollView
@@ -81,7 +84,7 @@ export default function HomeScreen() {
                         </Text>
                     </View>
 
-                    <TouchableOpacity style={styles.bellButton} onPress={() => { toggleTheme() }}>
+                    <TouchableOpacity style={styles.toggleButton} onPress={() => { toggleTheme() }}>
                         {theme === 'dark'
                             ? <Sun size={22} color={colors.champagne} />
                             : <Moon size={22} color={colors.champagne} />
@@ -214,15 +217,14 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 32,
+        paddingHorizontal: 10,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',    // Greeting left, bell right
         alignItems: 'center',
         paddingTop: 16,
-        marginBottom: 2,
+        marginBottom: 5,
     },
     greeting: {
         fontSize: 14,
@@ -234,7 +236,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         fontWeight: 'bold',
         color: colors.textPrimary
     },
-    bellButton: {
+    toggleButton: {
         width: 40,
         height: 40,
         borderRadius: 50,
@@ -301,16 +303,16 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        width: '100%',
     },
     actionButton: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
         borderRadius: 14,
         paddingVertical: 13,
-
+        paddingHorizontal: 10,
     },
     actionButtonExpenseText: {
         color: colors.danger,

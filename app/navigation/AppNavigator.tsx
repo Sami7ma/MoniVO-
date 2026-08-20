@@ -6,7 +6,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, ArrowLeftRight, PiggyBank, BarChart3 } from 'lucide-react-native';
+import { Home, ArrowLeftRight, PiggyBank, BarChart } from 'lucide-react-native';
 
 import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
@@ -77,7 +77,7 @@ function AppTabNavigator() {
                     backgroundColor: colors.surface,
                     borderTopColor: colors.border,
                     borderTopWidth: 1,
-                    height: 64,
+                    height: 61,
                     paddingBottom: 8,
                 },
                 tabBarActiveTintColor: colors.champagne,    // Gold for selected tab
@@ -92,7 +92,7 @@ function AppTabNavigator() {
                     if (route.name === 'Home') return <Home size={22} color={color} />;
                     if (route.name === 'Transactions') return <ArrowLeftRight size={22} color={color} />;
                     if (route.name === 'Budgets') return <PiggyBank size={22} color={color} />;
-                    if (route.name === 'Analytics') return <BarChart3 size={22} color={color} />;
+                    if (route.name === 'Analytics') return <BarChart size={22} color={color} />;
                 },
             })}
         >
