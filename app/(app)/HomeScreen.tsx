@@ -1,15 +1,9 @@
 // app/(app)/HomeScreen.tsx
 // The main dashboard — the first screen users see after logging in.
 import React from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    FlatList,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Plus, TrendingUp, TrendingDown, Sun, Moon } from 'lucide-react-native';
 import useTheme from '../../hooks/useTheme';
@@ -45,6 +39,9 @@ export default function HomeScreen() {
     // Helper: find a category by its ID
     // This is why we have categoryId on transactions — we look up the full category here
     const getCategoryById = (id: string) => categories.find((cat) => cat.id === id);
+
+    //  navigation 
+    const navigation = useNavigation();
 
     // ── NUMBER FORMATTING ────────────────────────────────────────────────────────
     const formatMoney = (amount: number) =>
@@ -167,7 +164,7 @@ export default function HomeScreen() {
                 {/* ── RECENT TRANSACTIONS ─────────────────────────────────────────── */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Recent Transactions</Text>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Transactions' as never)}>
                         <Text style={styles.seeAll}>See all</Text>
                     </TouchableOpacity>
                 </View>
