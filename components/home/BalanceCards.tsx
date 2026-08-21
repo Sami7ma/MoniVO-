@@ -21,6 +21,8 @@ import {
     ImageBackground
 } from 'react-native';
 import useTheme from '../../hooks/useTheme';
+import { LinearGradient } from 'expo-linear-gradient';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // The card is intentionally smaller than the available screen width.
@@ -50,6 +52,7 @@ interface CardData {
     type: 'income' | 'balance' | 'expense';
     label: string;
     amountColor: string;
+    gradientColors: [string, string, ...string[]];
 }
 
 const cardConfigs: CardData[] = [
@@ -58,18 +61,21 @@ const cardConfigs: CardData[] = [
         type: 'income',
         label: 'TOTAL INCOME',
         amountColor: '#009688',
+        gradientColors: ['#1A3A2A', '#0F2318', '#0A1A12'],
     },
     {
         id: 'balance',
         type: 'balance',
         label: 'TOTAL BALANCE',
         amountColor: '#C8A96B',
+        gradientColors: ['#1C1A14', '#12100C', '#0A0906'],
     },
     {
         id: 'expense',
         type: 'expense',
         label: 'TOTAL EXPENSES',
         amountColor: '#A34846',
+        gradientColors: ['#2A1A1A', '#1E1010', '#140A0A'],
     },
 ];
 // COMPONENT
@@ -141,34 +147,22 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
         }: {
             item: CardData;
         }) => (
-            <ImageBackground
-                source={require('../../assets/CARDiMGAE.jpg')}
-                style={[
-                    styles.card,
-                    {
-                        borderColor: colors.cardBorder,
-                    },
-                ]}
-                imageStyle={styles.cardBackground}
+            <LinearGradient
+                colors={item.gradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.card, { borderColor: colors.cardBorder, }]}
             >
                 <View style={styles.cardOverlay} />
                 {/*TOP ROW*/}
                 <View style={styles.cardTopRow}>
-                    <Text style={[
-                        styles.cardLogoItalic,
-                        { color: '#FFF' },
-                    ]}>
+                    <Text style={[styles.cardLogoItalic, { color: '#FFF' },]}>
                         MoniVo
                     </Text>
                     <Nfc size={20} color={colors.champagne} style={styles.nfcIcon} />
                 </View>
                 {/* CHIP*/}
-                <View style={[
-                    styles.chip,
-                    {
-                        backgroundColor: colors.champagne,
-                    },
-                ]}>
+                <View style={[styles.chip, { backgroundColor: colors.champagne, },]}>
                     <View style={styles.chipLines}>
                         <View style={styles.chipLine} />
                         <View style={styles.chipLine} />
@@ -176,82 +170,40 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
                     </View>
                 </View>
                 {/*LABEL + AMOUNT*/}
-                <Text style={[
-                    styles.cardLabel,
-                    {
-                        color: item.amountColor,
-                    },
-                ]}>
+                <Text style={[styles.cardLabel, { color: item.amountColor, },]}>
                     {item.label}
                 </Text>
-                <Text style={[
-                    styles.cardAmount,
-                    {
-                        color: item.amountColor,
-                    },
-                ]}>
+                <Text style={[styles.cardAmount, { color: item.amountColor, },]}>
                     {formatMoney(getAmount(item.type))}
                 </Text>
                 {/* CARD NUMBER DOTS*/}
                 <View style={styles.cardDots}>
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={i} style={[
-                            styles.fakeDot,
-                            {
-                                backgroundColor:
-                                    colors.textSecondary,
-                            },
-                        ]} />
+                        <View key={i} style={[styles.fakeDot, { backgroundColor: colors.textSecondary, },]} />
                     ))}
                     <View style={{ width: 12 }} />
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={`b${i}`} style={[
-                            styles.fakeDot,
-                            {
-                                backgroundColor:
-                                    colors.textSecondary,
-                            },
-                        ]} />
+                        <View key={`b${i}`} style={[styles.fakeDot, { backgroundColor: colors.textSecondary, },]} />
                     ))}
                     <View style={{ width: 12 }} />
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={`c${i}`} style={[
-                            styles.fakeDot,
-                            {
-                                backgroundColor:
-                                    colors.textSecondary,
-                            },
-                        ]} />
+                        <View key={`c${i}`} style={[styles.fakeDot, { backgroundColor: colors.textSecondary, },]} />
                     ))}
                     <View style={{ width: 12 }} />
                     {[0, 1, 2, 3].map((_, i) => (
-                        <View key={`d${i}`} style={[
-                            styles.fakeDot,
-                            {
-                                backgroundColor:
-                                    colors.textSecondary,
-                            },
-                        ]} />
+                        <View key={`d${i}`} style={[styles.fakeDot, { backgroundColor: colors.textSecondary, },]} />
                     ))}
                 </View>
                 {/* BOTTOM ROW */}
                 <View style={styles.cardBottomRow}>
-                    <Text style={[
-                        styles.cardHolder,
-                        { color: '#FFF', },
-                    ]}>
+                    <Text style={[styles.cardHolder, { color: '#FFF', },]}>
                         {userName}
                     </Text>
-                    <Text style={[
-                        styles.cardBrand,
-                        {
-                            color: colors.champagne,
-                        },
-                    ]}>
+                    <Text style={[styles.cardBrand, { color: colors.champagne, },]}>
                         MONIVO
                     </Text>
                 </View>
-            </ImageBackground>
+            </LinearGradient>
         );
         // RETURN
         return (
@@ -289,18 +241,11 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
                                 i === activeIndex
                                     ? [
                                         styles.dotActive,
-                                        {
-                                            backgroundColor:
-                                                colors.champagne,
-                                        },
+                                        { backgroundColor: colors.champagne, },
                                     ]
                                     : [
                                         styles.dotInactive,
-                                        {
-                                            backgroundColor:
-                                                colors.textMuted +
-                                                '30',
-                                        },
+                                        { backgroundColor: colors.textMuted + '30', },
                                     ],
                             ]}
                         />
