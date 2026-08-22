@@ -17,7 +17,7 @@ import LoginScreen from '../(auth)/LoginScreen';
 import RegisterScreen from '../(auth)/RegisterScreen';
 import HomeScreen from '../(app)/HomeScreen';
 import TransactionScreen from '../(app)/TransactionScreen';
-
+import BudgetsScreen from '../(app)/BudgetsScreen';
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPESCRIPT: Define what screens exist in each navigator
 // This tells TypeScript the valid screen names so you get autocomplete later
@@ -106,7 +106,7 @@ function AppTabNavigator() {
             />
             <AppTabs.Screen
                 name="Budgets"
-                component={HomeScreen}  // ← temporary placeholder
+                component={BudgetsScreen}  // ← temporary placeholder
                 options={{ tabBarLabel: 'Budgets' }}
             />
             <AppTabs.Screen

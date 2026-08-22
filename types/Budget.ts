@@ -1,5 +1,6 @@
 // A budget sets a spending limit for a specific category.
 // Example: "Don't spend more than ETB 500 on Groceries this month"
+// "Don't spend more than ETB 500 on Breakfast from Aug 21 to Aug 27."
 
 export interface Budget {
     id: string;
@@ -7,5 +8,6 @@ export interface Budget {
     limitAmount: number;          // The maximum you want to spend, e.g. 500.00
     period: 'monthly' | 'weekly'; // How often does this budget reset?
     startDate: string;            // When did you start tracking this budget?
+    endDate: string;              // When does this budget end?
     alertThreshold?: number;      // Optional: alert at what %? e.g. 0.8 = warn at 80% spent
 }
