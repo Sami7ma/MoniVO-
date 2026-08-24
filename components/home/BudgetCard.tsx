@@ -118,7 +118,6 @@ export default function BudgetCard({
     // Example:
     // Weekly · Aug 21 – Aug 27
     const periodText =
-        `${budget.period === 'monthly' ? 'Monthly' : 'Weekly'} · ` +
         `${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}`;
 
     return (

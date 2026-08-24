@@ -6,8 +6,8 @@ export interface Budget {
     id: string;
     categoryId: string;           // Which category is this budget for? Links to Category.id
     limitAmount: number;          // The maximum you want to spend, e.g. 500.00
-    period: 'monthly' | 'weekly'; // How often does this budget reset?
     startDate: string;            // When did you start tracking this budget?
     endDate: string;              // When does this budget end?
+    recurring?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
     alertThreshold?: number;      // Optional: alert at what %? e.g. 0.8 = warn at 80% spent
 }

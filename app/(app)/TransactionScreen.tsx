@@ -6,13 +6,13 @@ import React, { useState, useMemo, act } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SectionList, Modal, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { CalendarDays, Filter, Search, X } from 'lucide-react-native';
+import { CalendarDays, Filter, Search, X, Plus } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
 import TransactionRow from '../../components/home/TransactionRow';
 import { FlatList } from 'react-native';
-
+import AddTransactionModal from '../../components/modals/AddTransactionModal';
 export default function TransactionScreen() {
     // theme
     const colors = useTheme();
@@ -25,7 +25,8 @@ export default function TransactionScreen() {
     // Locat state
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'ALL' | 'CREDIT' | 'DEBIT'>('ALL');
-
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalType, setModalType] = useState<'CREDIT' | 'DEBIT'>('DEBIT');
     // calnder visibility 
     const [calendarVisible, setCalendarVisible] = useState(false);
     // show transarin form every dates
@@ -98,9 +99,25 @@ export default function TransactionScreen() {
             <StatusBar style={colors.statusBar} />
             {/* header  */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Transactions</Text>
-                <Text style={styles.headerSubtitle}>Search and explore your transactions</Text>
+                <View style={styles.headerText}>
+                    <Text style={styles.headerTitle}>
+                        Transactions
+                    </Text>
+
+                    <Text style={styles.headerSubtitle}>
+                        Search and explore your transactions
+                    </Text>
+                </View>
+
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => setModalVisible(true)}
+                    activeOpacity={0.8}
+                >
+                    <Plus size={21} color={colors.background} />
+                </TouchableOpacity>
             </View>
+
             {/* search bar */}
             <View style={styles.searchContainer}>
                 <Search size={20} color={colors.textSecondary} />
@@ -296,6 +313,11 @@ export default function TransactionScreen() {
 
                 </View>
             </Modal>
+            <AddTransactionModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                defaultType={modalType}
+            />
         </SafeAreaView >
     );
 }
@@ -307,19 +329,39 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             backgroundColor: colors.background,
         },
         header: {
-            paddingHorizontal: 10,
-            paddingTop: 16,
-            paddingBottom: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 18,
+            paddingTop: 14,
+            paddingBottom: 12,
         },
+
+        headerText: {
+            flex: 1,
+            paddingRight: 12,
+        },
+
         headerTitle: {
             fontSize: 28,
             fontWeight: 'bold',
             color: colors.textPrimary,
         },
+
         headerSubtitle: {
             fontSize: 14,
             color: colors.textSecondary,
             marginTop: 4,
+        },
+
+        addButton: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: colors.champagne,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: 10,
         },
         searchContainer: {
             flexDirection: 'row',
@@ -492,4 +534,5 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             fontSize: 14,
             fontWeight: '600',
         },
+
     });

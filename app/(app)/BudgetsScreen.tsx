@@ -1,21 +1,14 @@
 import React, { useState, useMemo } from "react";
 
-import {
-    Text,
-    View,
-    StyleSheet,
-    FlatList,
-    TouchableOpacity,
-    Alert,
-} from "react-native";
-
+import { Text, View, StyleSheet, FlatList, TouchableOpacity, Alert, } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Plus } from "lucide-react-native";
+import { Plus, NotebookPen } from "lucide-react-native";
 
 import useTheme from "../../hooks/useTheme";
 import useMoniVoStore from "../../store/useMoniVoStore";
 import BudgetCard from "../../components/home/BudgetCard";
+
 import AddBudgetModal from '../../components/modals/AddBudgetModal';
 
 
@@ -32,20 +25,18 @@ export default function BudgetsScreen() {
     const categories = useMoniVoStore((state) => state.categories);
     const deleteBudget = useMoniVoStore((state) => state.deleteBudget);
 
-    // ── LOCAL STATE ──────────────────────────────────────────
+    // LOCAL STATE
 
     const [modalVisible, setModalVisible] = useState(false);
 
-    // ── HELPERS ──────────────────────────────────────────────
-
+    // HELPERS
     const getCategoryById = (id: string) =>
         categories.find((cat) => cat.id === id);
 
-    // ── CALCULATE SPENT PER CATEGORY ─────────────────────────
+    // CALCULATE SPENT PER CATEGORY
 
-    // Calculate how much was spent inside each budget's
-    // own start and end dates.
-    // for now we use this month oly 
+    // Calculate how much was spent inside each budget's own start and end dates.
+    // for now we use this month only
 
     const spendByCategory = useMemo(() => {
         // Get the current month's start ans end dates
@@ -68,10 +59,8 @@ export default function BudgetsScreen() {
         return spentMap;
     }, [transactions]);
 
-    // ── DELETE HANDLER ───────────────────────────────────────
-
+    //DELETE HANDLER 
     const handleDelete = (budgetId: string, categoryName: string) => {
-
         Alert.alert(
             "Delete Budget", // title 
             `Remove the budget for ${categoryName}?`, // message 
@@ -95,11 +84,10 @@ export default function BudgetsScreen() {
         (sum, budget) => sum + (spendByCategory[budget.id] || 0), 0
     );
 
-    // ── UI ──────────────────────────────────────────────────
-
+    // UI 
     return (
-        <SafeAreaView>
-            <StatusBar />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+            <StatusBar style={colors.statusBar} />
             <View style={styles.header}>
                 <View>
                     <Text style={styles.headerTitle}>Budgets</Text>
@@ -162,7 +150,11 @@ export default function BudgetsScreen() {
                 )}
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
-                        <Text style={styles.emptyIcon}>an empty icon here</Text>
+                        <NotebookPen
+                            size={62}
+                            style={styles.emptyIcon}
+                            strokeWidth={1.5}
+                        />
                         <Text style={styles.emptyTitle}>No budgets yet</Text>
                         <Text style={styles.emptySubtitle}>
                             Tap + to set your first spending limit
@@ -170,7 +162,11 @@ export default function BudgetsScreen() {
                     </View>
                 }
             />
-        </SafeAreaView >
+            <AddBudgetModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+            />
+        </SafeAreaView>
 
     );
 }
@@ -258,13 +254,14 @@ const createStyles = (
 
         emptyState: {
             alignItems: "center",
+            justifyContent: "center",
             paddingTop: 100,
             gap: 8,
         },
 
         emptyIcon: {
-            fontSize: 48,
             marginBottom: 8,
+            color: colors.champagne,
         },
 
         emptyTitle: {
