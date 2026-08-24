@@ -1,80 +1,50 @@
-// Form modal for creating a new spending budget.
-//
-// User picks a category, sets a limit, chooses monthly/weekly,
+// Modal form for createing a new budget
+// The user selects:
+// - A spending category
+// - A budget limit
+// - A budget period
+// - A start date
+// - An end date
 // and selects the date range for the budget.
-
 import React, { useState } from 'react';
-
-import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    Modal,
-    ScrollView,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-} from 'react-native';
-
-import {
-    X,
-    Check,
-    ChevronDown,
-    CalendarDays,
-} from 'lucide-react-native';
-
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, Pressable, } from 'react-native';
+import { X, Check, ChevronDown, CalendarDays, } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 
+// hooks
 import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
 
+// types
 interface AddBudgetModalProps {
     visible: boolean;
     onClose: () => void;
 }
-
-export default function AddBudgetModal({
-    visible,
-    onClose,
-}: AddBudgetModalProps) {
+export default function AddBudgetModal({ visible, onClose, }: AddBudgetModalProps) {
 
     // Get the current theme colors.
     const colors = useTheme();
-
     // Create the styles using the current theme colors.
     const styles = createStyles(colors);
 
-    // ── ZUSTAND ──────────────────────────────────────────────
-
+    //  ZUSTAND 
     const categories = useMoniVoStore((state) => state.categories);
     const budgets = useMoniVoStore((state) => state.budgets);
     const addBudget = useMoniVoStore((state) => state.addBudget);
 
-    // ── LOCAL STATE ──────────────────────────────────────────
 
+    //  LOCAL STATE 
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [limitAmount, setLimitAmount] = useState('');
-    const [period, setPeriod] =
-        useState<'monthly' | 'weekly'>('monthly');
+    const [period, setPeriod] = useState<'monthly' | 'weekly'>('monthly');
 
-    const [startDate, setStartDate] = useState(
-        new Date().toISOString().split('T')[0]
-    );
-
-    const [endDate, setEndDate] = useState(
-        new Date().toISOString().split('T')[0]
-    );
-
-    const [selectingDate, setSelectingDate] =
-        useState<'start' | 'end'>('start');
-
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showCalendar, setShowCalendar] = useState(false);
-    const [showCategoryPicker, setShowCategoryPicker] =
-        useState(false);
+    const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-    // ── AVAILABLE CATEGORIES ─────────────────────────────────
+    //  AVAILABLE CATEGORIES
 
     // Only show EXPENSE categories because income is not budgeted.
     // Also exclude categories that already have a budget.
@@ -87,52 +57,38 @@ export default function AddBudgetModal({
         const alreadyBudgeted = budgets.some(
             (b) => b.categoryId === cat.id
         );
-
         return !alreadyBudgeted;
     });
 
-    // ── SELECTED CATEGORY ────────────────────────────────────
-
+    //  SELECTED CATEGORY
     const selectedCategory = categories.find(
         (cat) => cat.id === selectedCategoryId
     );
 
-    // ── DATE FORMAT ──────────────────────────────────────────
-
+    //  DATE FORMAT
     // Convert YYYY-MM-DD into a short readable date.
     // Example: 2026-08-21 -> Aug 21
     const formatDate = (date: string) => {
-        return new Date(`${date}T00:00:00`).toLocaleDateString(
-            'en-US',
-            {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-            }
+        return new Date(`${date}T00:00:00`).toLocaleDateString('en-US',
+            { month: 'short', day: 'numeric', year: 'numeric', }
         );
     };
-
-    // ── RESET ────────────────────────────────────────────────
-
+    //  RESET 
     const resetForm = () => {
         setSelectedCategoryId('');
         setLimitAmount('');
         setPeriod('monthly');
-
         const today = new Date().toISOString().split('T')[0];
-
         setStartDate(today);
         setEndDate(today);
-
         setSelectingDate('start');
         setShowCalendar(false);
         setShowCategoryPicker(false);
     };
 
-    // ── CALENDAR SELECTION ────────────────────────────────────
+    //  CALENDAR SELECTION
 
     const handleDateSelect = (date: string) => {
-
         // First select the start date.
         if (selectingDate === 'start') {
             setStartDate(date);
@@ -157,7 +113,7 @@ export default function AddBudgetModal({
         setShowCalendar(false);
     };
 
-    // ── SUBMIT ───────────────────────────────────────────────
+    //  SUBMIT 
 
     const handleSubmit = () => {
 
@@ -190,7 +146,7 @@ export default function AddBudgetModal({
         onClose();
     };
 
-    // ── CALENDAR MARKINGS ─────────────────────────────────────
+    //  CALENDAR MARKINGS
 
     const markedDates = {
         [startDate]: {
@@ -237,7 +193,7 @@ export default function AddBudgetModal({
                 >
                     <View style={styles.container}>
 
-                        {/* ── HEADER ──────────────────────── */}
+                        {/*  HEADER */}
 
                         <View style={styles.header}>
                             <View>
@@ -270,7 +226,7 @@ export default function AddBudgetModal({
                             showsVerticalScrollIndicator={false}
                         >
 
-                            {/* ── CATEGORY PICKER ─────────── */}
+                            {/*  CATEGORY PICKER  */}
 
                             <View style={styles.fieldGroup}>
                                 <Text style={styles.label}>
@@ -381,7 +337,7 @@ export default function AddBudgetModal({
                                 )}
                             </View>
 
-                            {/* ── AMOUNT ──────────────────── */}
+                            {/*  AMOUNT  */}
 
                             <View style={styles.fieldGroup}>
                                 <Text style={styles.label}>
@@ -406,7 +362,7 @@ export default function AddBudgetModal({
                                 </View>
                             </View>
 
-                            {/* ── PERIOD TOGGLE ───────────── */}
+                            {/*  PERIOD TOGGLE  */}
 
                             <View style={styles.fieldGroup}>
                                 <Text style={styles.label}>
@@ -433,14 +389,11 @@ export default function AddBudgetModal({
                                                 setPeriod(p)
                                             }
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.periodText,
-                                                    period === p && {
-                                                        color: colors.champagne,
-                                                    },
-                                                ]}
-                                            >
+                                            <Text style={[styles.periodText,
+                                            period === p && {
+                                                color: colors.champagne,
+                                            },
+                                            ]}>
                                                 {p === 'monthly'
                                                     ? 'Monthly'
                                                     : 'Weekly'}
@@ -450,7 +403,7 @@ export default function AddBudgetModal({
                                 </View>
                             </View>
 
-                            {/* ── DATE RANGE ───────────────── */}
+                            {/*  DATE RANGE  */}
 
                             <View style={styles.fieldGroup}>
                                 <Text style={styles.label}>
@@ -489,63 +442,40 @@ export default function AddBudgetModal({
                                 </TouchableOpacity>
 
                                 {showCalendar && (
-                                    <View
-                                        style={
-                                            styles.calendarContainer
-                                        }
-                                    >
+                                    <View style={styles.calendarContainer}>
                                         <Calendar
-                                            current={
-                                                selectingDate === 'start'
-                                                    ? startDate
-                                                    : endDate
-                                            }
-                                            minDate={
-                                                selectingDate === 'end'
-                                                    ? startDate
-                                                    : undefined
-                                            }
+                                            current={selectingDate === 'start'
+                                                ? startDate
+                                                : endDate}
+                                            minDate={selectingDate === 'end'
+                                                ? startDate
+                                                : undefined}
                                             onDayPress={(day) =>
-                                                handleDateSelect(
-                                                    day.dateString
-                                                )
+                                                handleDateSelect(day.dateString)
                                             }
                                             markedDates={markedDates}
                                             markingType="period"
                                             theme={{
-                                                backgroundColor:
-                                                    colors.surface,
-                                                calendarBackground:
-                                                    colors.surface,
-                                                textSectionTitleColor:
-                                                    colors.textSecondary,
-                                                selectedDayBackgroundColor:
-                                                    colors.champagne,
-                                                selectedDayTextColor:
-                                                    colors.background,
-                                                todayTextColor:
-                                                    colors.champagne,
-                                                dayTextColor:
-                                                    colors.textPrimary,
-                                                textDisabledColor:
-                                                    colors.textMuted,
-                                                monthTextColor:
-                                                    colors.textPrimary,
-                                                arrowColor:
-                                                    colors.champagne,
-                                                textDayFontWeight:
-                                                    '500',
-                                                textMonthFontWeight:
-                                                    '700',
-                                                textDayHeaderFontWeight:
-                                                    '600',
+                                                backgroundColor: colors.surface,
+                                                calendarBackground: colors.surface,
+                                                textSectionTitleColor: colors.textSecondary,
+                                                selectedDayBackgroundColor: colors.champagne,
+                                                selectedDayTextColor: colors.background,
+                                                todayTextColor: colors.champagne,
+                                                dayTextColor: colors.textPrimary,
+                                                textDisabledColor: colors.textMuted,
+                                                monthTextColor: colors.textPrimary,
+                                                arrowColor: colors.champagne,
+                                                textDayFontWeight: '500',
+                                                textMonthFontWeight: '700',
+                                                textDayHeaderFontWeight: '600',
                                             }}
                                         />
                                     </View>
                                 )}
                             </View>
 
-                            {/* ── SUBMIT ──────────────────── */}
+                            {/*  SUBMIT  */}
 
                             <TouchableOpacity
                                 style={styles.submitButton}

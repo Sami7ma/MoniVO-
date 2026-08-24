@@ -27,7 +27,8 @@ interface MoniVoStore {
 
     // Action (function that change data)
     setUser: (user: User | null) => void;
-    addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+    addTransaction:
+    (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
     // omit means a transaction bit wihtoud the id and created at fields
     // because created at and id are aout generated when adding a transaction
     deleteTransaction: (id: string) => void;

@@ -45,223 +45,133 @@ export default function BudgetsScreen() {
 
     // Calculate how much was spent inside each budget's
     // own start and end dates.
-    const spentByBudget = useMemo(() => {
+    // for now we use this month oly 
 
+    const spendByCategory = useMemo(() => {
+        // Get the current month's start ans end dates
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth());
+
+        // build a map:{categoryID: totalSpent}
         const spentMap: Record<string, number> = {};
-
-        budgets.forEach((budget) => {
-
-            const startDate = new Date(budget.startDate);
-            const endDate = new Date(budget.endDate);
-
-            // Include the complete end date.
-            endDate.setHours(23, 59, 59, 999);
-
-            const totalSpent = transactions
-                .filter((tx) => {
-
-                    // Only expenses count toward a budget.
-                    if (tx.type !== 'DEBIT') {
-                        return false;
-                    }
-
-                    // Only transactions belonging to this
-                    // budget's category count.
-                    if (tx.categoryId !== budget.categoryId) {
-                        return false;
-                    }
-
-                    const txDate = new Date(tx.date);
-
-                    // Transaction must fall inside this budget's
-                    // start and end dates.
-                    return txDate >= startDate && txDate <= endDate;
-                })
-                .reduce((sum, tx) => sum + tx.amount, 0);
-
-            spentMap[budget.id] = totalSpent;
+        transactions.filter((tx) => {
+            // onlu count DEBIT (expenses), not income
+            if (tx.type !== 'DEBIT') return false;
+            // only count transactions from thsi month
+            const txDate = new Date(tx.date);
+            return txDate >= monthStart && txDate <= monthEnd;
+        }).forEach((tx) => {
+            // add up spending per category
+            spentMap[tx.categoryId] = (spentMap[tx.categoryId] || 0 + tx.amount);
         });
-
         return spentMap;
-
-    }, [transactions, budgets]);
+    }, [transactions]);
 
     // ── DELETE HANDLER ───────────────────────────────────────
 
-    const handleDelete = (
-        budgetId: string,
-        categoryName: string
-    ) => {
+    const handleDelete = (budgetId: string, categoryName: string) => {
 
         Alert.alert(
-            "Remove Budget",
-            `Remove the budget for ${categoryName}?`,
+            "Delete Budget", // title 
+            `Remove the budget for ${categoryName}?`, // message 
             [
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    text: "Cancel",
-                    style: "cancel",
-                },
-                {
-                    text: "Remove",
-                    style: "destructive",
-                    onPress: () => deleteBudget(budgetId),
-                },
+                    text: 'Delete', style: 'destructive',
+                    onPress: () => deleteBudget(budgetId)
+                }
             ]
         );
     };
 
-    // ── SUMMARY ──────────────────────────────────────────────
-
+    //SUMMARY 
     const totalBudgeted = budgets.reduce(
         (sum, budget) => sum + budget.limitAmount,
         0
     );
 
     const totalSpent = budgets.reduce(
-        (sum, budget) => sum + (spentByBudget[budget.id] || 0),
-        0
+        (sum, budget) => sum + (spendByCategory[budget.id] || 0), 0
     );
 
     // ── UI ──────────────────────────────────────────────────
 
     return (
-        <SafeAreaView
-            style={styles.safeArea}
-            edges={["top", "left", "right"]}
-        >
-
-            <StatusBar style={colors.statusBar} />
-
-            {/* HEADER */}
-
+        <SafeAreaView>
+            <StatusBar />
             <View style={styles.header}>
-
                 <View>
-
-                    <Text style={styles.headerTitle}>
-                        Budgets
-                    </Text>
-
+                    <Text style={styles.headerTitle}>Budgets</Text>
                     <Text style={styles.headerSubtitle}>
-                        {budgets.length} active budget
-                        {budgets.length !== 1 ? "s" : ""}
+                        {budgets.length} active budget{budgets.length !== 1 ? 's' : ''}
                     </Text>
-
                 </View>
-
                 <TouchableOpacity
                     style={styles.addButton}
                     onPress={() => setModalVisible(true)}
                     activeOpacity={0.8}
                 >
-
-                    <Plus
-                        size={20}
-                        color={colors.background}
-                    />
-
+                    <Plus size={20} color={colors.background} />
                 </TouchableOpacity>
-
             </View>
-
-            {/* SUMMARY */}
-
+            {/* summary row */}
             {budgets.length > 0 && (
-
                 <View style={styles.summaryRow}>
-
                     <View style={styles.summaryItem}>
-
-                        <Text style={styles.summaryLabel}>
-                            Total Budgeted
-                        </Text>
-
+                        <Text style={styles.summaryLabel}>Total Budgeted</Text>
                         <Text style={styles.summaryValue}>
                             ETB {totalBudgeted.toLocaleString()}
                         </Text>
-
                     </View>
-
                     <View style={styles.summaryDivider} />
-
                     <View style={styles.summaryItem}>
-
-                        <Text style={styles.summaryLabel}>
-                            Total Spent
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.summaryValue,
-                                {
-                                    color:
-                                        totalSpent > totalBudgeted
-                                            ? colors.danger
-                                            : colors.success,
-                                },
-                            ]}
-                        >
+                        <Text style={styles.summaryLabel}>Total Spent</Text>
+                        <Text style={[
+                            styles.summaryValue,
+                            {
+                                color: totalSpent > totalBudgeted
+                                    ? colors.danger
+                                    : colors.success
+                            },
+                        ]}>
                             ETB {totalSpent.toLocaleString()}
                         </Text>
-
                     </View>
-
                 </View>
-
             )}
 
-            {/* BUDGET LIST */}
-
+            {/* Budger */}
             <FlatList
                 data={budgets}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
-
-                renderItem={({ item }) => {
-
-                    const category =
-                        getCategoryById(item.categoryId);
-
-                    return (
-                        <BudgetCard
-                            budget={item}
-                            category={category}
-                            spent={spentByBudget[item.id] || 0}
-                            onDelete={() =>
-                                handleDelete(
-                                    item.id,
-                                    category?.name ?? "Unknown"
-                                )
-                            }
-                        />
-                    );
-                }}
-
+                renderItem={({ item }) => (
+                    <BudgetCard
+                        budget={item}
+                        category={getCategoryById(item.categoryId)}
+                        spent={spendByCategory[item.categoryId] || 0}
+                        onDelete={() =>
+                            handleDelete(
+                                item.id,
+                                getCategoryById(item.categoryId)?.name ?? 'Unknown'
+                            )
+                        }
+                    />
+                )}
                 ListEmptyComponent={
-
                     <View style={styles.emptyState}>
-
-                        <Text style={styles.emptyIcon}>
-                            📊
-                        </Text>
-
-                        <Text style={styles.emptyTitle}>
-                            No budgets yet
-                        </Text>
-
+                        <Text style={styles.emptyIcon}>an empty icon here</Text>
+                        <Text style={styles.emptyTitle}>No budgets yet</Text>
                         <Text style={styles.emptySubtitle}>
                             Tap + to set your first spending limit
                         </Text>
-
                     </View>
                 }
             />
-            <AddBudgetModal
-                visible={modalVisible}
-                onClose={() => setModalVisible(false)}
-            />
-        </SafeAreaView>
+        </SafeAreaView >
+
     );
 }
 
@@ -348,7 +258,7 @@ const createStyles = (
 
         emptyState: {
             alignItems: "center",
-            paddingTop: 80,
+            paddingTop: 100,
             gap: 8,
         },
 

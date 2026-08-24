@@ -2,7 +2,6 @@
 // Premium swipeable MoniVo financial cards.
 // Default card: Total Balance
 // Swipe left/right: Total Income / Total Expenses
-
 import React, {
     useRef,
     useState,
@@ -74,8 +73,8 @@ const cardConfigs: CardData[] = [
         id: 'expense',
         type: 'expense',
         label: 'TOTAL EXPENSES',
-        amountColor: '#A34846',
-        gradientColors: ['#2A1A1A', '#1E1010', '#140A0A'],
+        amountColor: '#000',
+        gradientColors: ['#840b0bff', '#d81c1cff', '#0b0303ff'],
     },
 ];
 // COMPONENT
@@ -156,7 +155,7 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
                 <View style={styles.cardOverlay} />
                 {/*TOP ROW*/}
                 <View style={styles.cardTopRow}>
-                    <Text style={[styles.cardLogoItalic, { color: '#FFF' },]}>
+                    <Text style={[styles.cardLogoItalic, { color: colors.champagne },]}>
                         MoniVo
                     </Text>
                     <Nfc size={20} color={colors.champagne} style={styles.nfcIcon} />
@@ -250,7 +249,6 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
                             ]}
                         />
                     ))}
-
                 </View>
             </View>
         );
