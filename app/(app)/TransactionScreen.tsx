@@ -322,217 +322,216 @@ export default function TransactionScreen() {
     );
 }
 
-const createStyles = (colors: ReturnType<typeof useTheme>) =>
-    StyleSheet.create({
-        safeArea: {
-            flex: 1,
-            backgroundColor: colors.background,
-        },
-        header: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 18,
-            paddingTop: 14,
-            paddingBottom: 12,
-        },
+const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 18,
+        paddingTop: 14,
+        paddingBottom: 12,
+    },
 
-        headerText: {
-            flex: 1,
-            paddingRight: 12,
-        },
+    headerText: {
+        flex: 1,
+        paddingRight: 12,
+    },
 
-        headerTitle: {
-            fontSize: 28,
-            fontWeight: 'bold',
-            color: colors.textPrimary,
-        },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: colors.textPrimary,
+    },
 
-        headerSubtitle: {
-            fontSize: 14,
-            color: colors.textSecondary,
-            marginTop: 4,
-        },
+    headerSubtitle: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        marginTop: 4,
+    },
 
-        addButton: {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colors.champagne,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: 10,
-        },
-        searchContainer: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: colors.surface,
-            marginHorizontal: 15,
-            marginVertical: 10,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: colors.border,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            gap: 8,
-        },
-        searchInput: {
-            flex: 1,
-            fontSize: 15,
-            color: colors.textPrimary,
-        },
-        // DATE
-        dateRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 15,
-            gap: 8,
-            marginBottom: 10,
-        },
-        dateButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderRadius: 13,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.surface,
-        },
-        dateButtonText: {
-            color: colors.textPrimary,
-            fontSize: 14,
-            fontWeight: '600',
-        },
-        clearDateButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            paddingHorizontal: 10,
-            paddingVertical: 8,
-        },
-        clearDateText: {
-            color: colors.textSecondary,
-            fontSize: 13,
-        },
-        // FILTER
-        filterRow: {
-            flexDirection: 'row',
-            paddingHorizontal: 15,
-            gap: 8,
-            marginBottom: 8,
-        },
-        filterPill: {
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            borderRadius: 15,
-            borderWidth: 1,
-            borderColor: colors.border,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        filterPillText: {
-            fontSize: 14,
-            fontWeight: '600',
-            color: colors.textSecondary,
-        },
-        // RESULTS
-        resultHeader: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 15,
-            marginBottom: 8,
-        },
-        resultText: {
-            fontSize: 14,
-            fontWeight: '600',
-            color: colors.textSecondary,
-        },
-        resultCount: {
-            fontSize: 13,
-            fontWeight: '700',
-            color: colors.champagne,
-        },
-        listContent: {
-            paddingHorizontal: 10,
-            paddingBottom: 32,
-        },
-        // EMPTY
-        emptyState: {
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 30,
-            gap: 8,
-        },
-        emptyIcon: {
-            fontSize: 48,
-            marginBottom: 8,
-        },
-        emptyTitle: {
-            fontSize: 16,
-            fontWeight: '600',
-            color: colors.textPrimary,
-        },
-        emptySubtitle: {
-            fontSize: 14,
-            color: colors.textSecondary,
-            textAlign: 'center',
-        },
-        // CALENDAR MODAL
-        modalOverlay: {
-            flex: 1,
-            backgroundColor: colors.overlay,
-            justifyContent: 'center',
-            paddingHorizontal: 20,
-        },
-        calendarContainer: {
-            backgroundColor: colors.surface,
-            borderRadius: 22,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: colors.border,
-        },
-        calendarHeader: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 18,
-            paddingTop: 18,
-            paddingBottom: 8,
-        },
-        calendarTitle: {
-            fontSize: 19,
-            fontWeight: '700',
-            color: colors.textPrimary,
-        },
-        calendarSubtitle: {
-            fontSize: 13,
-            color: colors.textSecondary,
-            marginTop: 3,
-        },
-        closeCalendarButton: {
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: colors.surfaceAlt,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        allDatesButton: {
-            marginHorizontal: 18,
-            marginBottom: 18,
-            paddingVertical: 12,
-            borderRadius: 12,
-            alignItems: 'center',
-            backgroundColor: colors.surfaceAlt,
-        },
-        allDatesText: {
-            color: colors.champagne,
-            fontSize: 14,
-            fontWeight: '600',
-        },
+    addButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.champagne,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 10,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        marginHorizontal: 15,
+        marginVertical: 10,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        gap: 8,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 15,
+        color: colors.textPrimary,
+    },
+    // DATE
+    dateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        gap: 8,
+        marginBottom: 10,
+    },
+    dateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 13,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+    },
+    dateButtonText: {
+        color: colors.textPrimary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    clearDateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+    },
+    clearDateText: {
+        color: colors.textSecondary,
+        fontSize: 13,
+    },
+    // FILTER
+    filterRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 15,
+        gap: 8,
+        marginBottom: 8,
+    },
+    filterPill: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    filterPillText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    // RESULTS
+    resultHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        marginBottom: 8,
+    },
+    resultText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    resultCount: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.champagne,
+    },
+    listContent: {
+        paddingHorizontal: 10,
+        paddingBottom: 32,
+    },
+    // EMPTY
+    emptyState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 30,
+        gap: 8,
+    },
+    emptyIcon: {
+        fontSize: 48,
+        marginBottom: 8,
+    },
+    emptyTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.textPrimary,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        textAlign: 'center',
+    },
+    // CALENDAR MODAL
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: colors.overlay,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    calendarContainer: {
+        backgroundColor: colors.surface,
+        borderRadius: 22,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    calendarHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 18,
+        paddingTop: 18,
+        paddingBottom: 8,
+    },
+    calendarTitle: {
+        fontSize: 19,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    calendarSubtitle: {
+        fontSize: 13,
+        color: colors.textSecondary,
+        marginTop: 3,
+    },
+    closeCalendarButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.surfaceAlt,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    allDatesButton: {
+        marginHorizontal: 18,
+        marginBottom: 18,
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        backgroundColor: colors.surfaceAlt,
+    },
+    allDatesText: {
+        color: colors.champagne,
+        fontSize: 14,
+        fontWeight: '600',
+    },
 
-    });
+});

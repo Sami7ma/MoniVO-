@@ -8,6 +8,6 @@ export interface Budget {
     limitAmount: number;          // The maximum you want to spend, e.g. 500.00
     startDate: string;            // When did you start tracking this budget?
     endDate: string;              // When does this budget end?
-    recurring?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    recurring?: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
     alertThreshold?: number;      // Optional: alert at what %? e.g. 0.8 = warn at 80% spent
 }

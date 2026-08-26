@@ -12,21 +12,125 @@
 // Custom: User chooses start date -> end date using calendar
 
 import React, { useState } from 'react';
-import { BlurView } from 'expo-blur';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, Pressable, } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, Pressable, Dimensions, FlatList } from 'react-native';
 import { X, Check, ChevronDown, Calendar as CalendarIcon, } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 // hooks
 import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // types
 interface AddBudgetModalProps {
     visible: boolean;
     onClose: () => void;
 }
+type BudgetPeriod = | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
-type BudgetPeriod = | 'monthly' | 'weekly' | 'custom';
+const PERIOD_OPTIONS = [
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'biweekly', label: 'Biweekly' },
+    { value: 'monthly', label: 'Monthly' },
+];
+type FixedBudgetPeriod =
+    | 'daily'
+    | 'weekly'
+    | 'biweekly'
+    | 'monthly';
+
+interface PeriodWheelProps {
+    value: FixedBudgetPeriod;
+    onChange: (value: FixedBudgetPeriod) => void;
+}
+
+const PeriodWheel = ({
+    value,
+    onChange,
+}: PeriodWheelProps) => {
+    const colors = useTheme();
+    const styles = createStyles(colors);
+
+    const ITEM_HEIGHT = 42;
+
+    const selectedIndex = PERIOD_OPTIONS.findIndex(
+        item => item.value === value
+    );
+
+    const listRef = React.useRef<FlatList>(null);
+
+    const handleScrollEnd = (event: any) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+
+        const index = Math.round(offsetY / ITEM_HEIGHT);
+
+        const selected = PERIOD_OPTIONS[index];
+
+        if (selected) {
+            onChange(
+                selected.value as FixedBudgetPeriod
+            );
+        }
+    };
+
+    return (
+        <View style={styles.periodWheelContainer}>
+            <FlatList
+                ref={listRef}
+                data={PERIOD_OPTIONS}
+                keyExtractor={(item) => item.value}
+                showsVerticalScrollIndicator={false}
+                snapToInterval={ITEM_HEIGHT}
+                decelerationRate="fast"
+                bounces={false}
+                getItemLayout={(_, index) => ({
+                    length: ITEM_HEIGHT,
+                    offset: ITEM_HEIGHT * index,
+                    index,
+                })}
+                contentContainerStyle={{
+                    paddingVertical: ITEM_HEIGHT,
+                }}
+                initialScrollIndex={
+                    selectedIndex >= 0
+                        ? selectedIndex
+                        : 0
+                }
+                onMomentumScrollEnd={handleScrollEnd}
+                renderItem={({ item }) => {
+                    const isSelected =
+                        item.value === value;
+
+                    return (
+                        <View
+                            style={[
+                                styles.periodWheelItem,
+                                {
+                                    height: ITEM_HEIGHT,
+                                },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.periodWheelText,
+                                    isSelected &&
+                                    styles.periodWheelTextActive,
+                                ]}
+                            >
+                                {item.label}
+                            </Text>
+                        </View>
+                    );
+                }}
+            />
+
+            <View
+                pointerEvents="none"
+                style={styles.periodWheelSelection}
+            />
+        </View>
+    );
+};
 
 export default function AddBudgetModal({
     visible,
@@ -71,6 +175,7 @@ export default function AddBudgetModal({
     // Controls the category dropdown.
     const [showCategoryPicker, setShowCategoryPicker,] = useState(false);
 
+    const recurring = period === 'custom' ? 'none' : period;
     // AVAILABLE CATEGORIES
     // Only expense categories can have budgets.
     // We also remove categories that already have a budget.
@@ -156,6 +261,25 @@ export default function AddBudgetModal({
 
         return { start, end };
     };
+    const getDailyRange = () => {
+        const today = new Date();
+        const date = formatDateToString(today);
+        return { start: date, end: date };
+    }
+    const getBiWeeklyRange = () => {
+        const today = new Date();
+        const currentDay = today.getDay();
+        const daysFromMonday =
+            currentDay === 0 ? 6 : currentDay - 1;
+        const start = new Date(today);
+        start.setDate(today.getDate() - daysFromMonday);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 13);
+        return {
+            start: formatDateToString(start),
+            end: formatDateToString(end),
+        };
+    }
     // GET RANGE OF DAYS
     // Example:
     // getRangeOfDays('monthly')
@@ -164,54 +288,40 @@ export default function AddBudgetModal({
     //     start: '2026-08-01',
     //     end: '2026-08-31'
     // }
-    const getRangeOfDays = (periodChosen: 'monthly' | 'weekly') => {
-        if (periodChosen === 'monthly') {
-            return getMonthlyRange();
-        }
-        return getWeeklyRange();
+    const getRangeOfDays = (periodChosen: 'daily' | 'weekly' | 'biweekly' | 'monthly') => {
+        if (periodChosen === 'daily') return getDailyRange();
+        if (periodChosen === 'weekly') return getWeeklyRange();
+        if (periodChosen === 'biweekly') return getBiWeeklyRange();
+
+        return getMonthlyRange();
     };
     // HANDLE PERIOD CHANGE
     // Runs when the user presses:
-    // Monthly
-    // Weekly
-    // Custom
+    // Monthly, biweekly, week;u.. custom
 
     const handlePeriodChange = (newPeriod: BudgetPeriod) => {
         // Save the selected period.
         setPeriod(newPeriod);
 
-        // MONTHLY
-        if (newPeriod === 'monthly') {
-            const range = getRangeOfDays('monthly');
-            setStartDate(range.start);
-            setEndDate(range.end);
-            // Monthly does not need
-            // the custom calendar.
-            setShowCalendar(false);
-        }
-        // WEEKLY
-        if (newPeriod === 'weekly') {
-            const range = getRangeOfDays('weekly');
-            setStartDate(range.start);
-            setEndDate(range.end);
-            // Weekly does not need
-            // the custom calendar.
-            setShowCalendar(false);
-        }
         // CUSTOM
         if (newPeriod === 'custom') {
             // Start a fresh custom selection.
             const today = new Date().toISOString().split('T')[0];
             setStartDate(today);
             setEndDate(today);
-
             // The first date the user chooses
             // will be the START date.
             setSelectingDate('start');
             // Open the calendar.
             setShowCalendar(true);
+            return;
         }
+        const range = getRangeOfDays(newPeriod);
+        setStartDate(range.start);
+        setEndDate(range.end);
+        setShowCalendar(false);
     };
+
 
     // RESET FORM
     const resetForm = () => {
@@ -324,11 +434,10 @@ export default function AddBudgetModal({
         // create budget
         addBudget({
             categoryId: selectedCategoryId,
-
             limitAmount: numAmount,
-            recurring: 'none',
-            startDate: startDate,
-            endDate: endDate,
+            recurring: recurring,
+            startDate,
+            endDate,
         });
 
         // Clear everything.
@@ -394,12 +503,11 @@ export default function AddBudgetModal({
                                     Category
                                 </Text>
                                 <TouchableOpacity style={styles.selectorButton}
-                                    onPress={() => setShowCategoryPicker(
-                                        !showCategoryPicker
-                                    )}
+                                    onPress={() => setShowCategoryPicker(!showCategoryPicker)}
                                 >
                                     <Text style={[
-                                        styles.selectorText, !selectedCategory && {
+                                        styles.selectorText,
+                                        !selectedCategory && {
                                             color: colors.textMuted,
                                         },
                                     ]}>
@@ -478,138 +586,74 @@ export default function AddBudgetModal({
                                     </Text>
 
                                     <TextInput
-
                                         style={styles.amountInput}
                                         value={limitAmount}
                                         onChangeText={setLimitAmount}
                                         placeholder="0.00"
-                                        placeholderTextColor={colors.textMuted}
+                                        placeholderTextColor={colors.textMuted + '70'}
                                         keyboardType="decimal-pad"
                                     />
                                 </View>
                             </View>
                             {/* PERIOD*/}
 
-                            <View style={styles.fieldGroup} >
-
+                            <View style={styles.fieldGroup}>
                                 <Text style={styles.label}>
                                     Period
                                 </Text>
 
-                                <View style={styles.periodRow}>
-
-                                    {/* MONTHLY */}
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.periodButton,
-                                            period === 'monthly' && {
-                                                backgroundColor: colors.champagne + '20',
-                                                borderColor: colors.champagne,
-                                            },
-                                        ]}
-                                        onPress={() => handlePeriodChange('monthly')}>
-                                        <Text style={[
-                                            styles.periodText,
-                                            period === 'monthly' && {
-                                                color: colors.champagne,
-                                            },
-                                        ]}>
-                                            Monthly
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    {/* WEEKLY */}
+                                <View style={styles.periodSelectorRow}>
+                                    <PeriodWheel
+                                        value={
+                                            period === 'custom'
+                                                ? 'monthly'
+                                                : period
+                                        }
+                                        onChange={handlePeriodChange}
+                                    />
 
                                     <TouchableOpacity
                                         style={[
-                                            styles.periodButton,
-                                            period === 'weekly' && {
-                                                backgroundColor: colors.champagne + '20',
-                                                borderColor: colors.champagne,
-                                            },
+                                            styles.customPeriodButton,
+                                            period === 'custom' &&
+                                            styles.customPeriodButtonActive,
                                         ]}
-
-                                        onPress={() => handlePeriodChange('weekly')}>
-
-                                        <Text style={[styles.periodText,
-                                        period === 'weekly' && {
-                                            color: colors.champagne,
-                                        },
-                                        ]}>
-                                            Weekly
-                                        </Text>
-
-                                    </TouchableOpacity>
-
-
-                                    {/* CUSTOM */}
-
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.periodButton,
-                                            period === 'custom' && {
-                                                backgroundColor: colors.champagne + '20',
-                                                borderColor: colors.champagne,
-                                            },
-                                        ]}
-
-                                        onPress={() => handlePeriodChange('custom')}
+                                        onPress={() =>
+                                            handlePeriodChange('custom')
+                                        }
+                                        activeOpacity={0.8}
                                     >
-
-                                        <View style={styles.periodContent}>
-
-                                            <CalendarIcon size={16} color={
+                                        <CalendarIcon
+                                            size={20}
+                                            color={
                                                 period === 'custom'
-                                                    ? colors.champagne
-                                                    : colors.textSecondary
-                                            } />
+                                                    ? colors.background
+                                                    : colors.champagne
+                                            }
+                                        />
 
-
-                                            <Text
-                                                style={[
-                                                    styles.periodText,
-
-                                                    period === 'custom' && {
-                                                        color: colors.champagne,
-                                                    },
-                                                ]}
-                                            >
-                                                Custom
-                                            </Text>
-
-                                        </View>
-
+                                        <Text
+                                            style={[
+                                                styles.customPeriodText,
+                                                period === 'custom' &&
+                                                styles.customPeriodTextActive,
+                                            ]}
+                                        >
+                                            Custom
+                                        </Text>
                                     </TouchableOpacity>
-
                                 </View>
-
                             </View>
-
 
                             {/* BUDGET PERIOD*/}
 
                             <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>
-                                    Budget Period
-                                </Text>
-
-
+                                <Text style={styles.label}>Budget Period</Text>
                                 {/* DATE SUMMARY*/}
-
                                 <View style={styles.dateSummary}>
-
-                                    <CalendarIcon
-                                        size={19}
-                                        color={
-                                            colors.champagne
-                                        }
-                                    />
-
-
+                                    <CalendarIcon size={19} color={colors.champagne} />
                                     <View style={styles.dateInfo}>
-
                                         <Text style={styles.dateTitle}>
-
                                             {
                                                 period === 'monthly'
                                                     ? 'Monthly budget'
@@ -737,43 +781,21 @@ export default function AddBudgetModal({
                                         )}
                                     </>
                                 )}
-
                             </View>
 
-
-                            {/* =================================
-                                CREATE BUTTON
-                            ================================= */}
-
+                            {/*CREATE BUTTON*/}
                             <TouchableOpacity
-
-                                style={
-                                    styles.submitButton
-                                }
-
-                                onPress={
-                                    handleSubmit
-                                }
-
-                                activeOpacity={0.85}
-                            >
-
-                                <Text
-                                    style={
-                                        styles.submitText
-                                    }
-                                >
+                                style={styles.submitButton}
+                                onPress={handleSubmit}
+                                activeOpacity={0.85}>
+                                <Text style={styles.submitText}>
                                     Create Budget
                                 </Text>
-
                             </TouchableOpacity>
 
                         </ScrollView>
-
                     </View>
-
                 </KeyboardAvoidingView>
-
             </View >
 
         </Modal >
@@ -804,17 +826,23 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
     },
     container: {
         width: '100%',
-        maxHeight: '90%',
-        backgroundColor: colors.surface + 'F2',
-        borderRadius: 28,
+        maxWidth: 500,
+        maxHeight: '88%',
+
+        backgroundColor: colors.surface,
+
+        borderColor: colors.champagne + '55',
+        borderRadius: 30,
         borderWidth: 1,
-        borderColor: colors.champagne + '40',
         overflow: 'hidden',
-        shadowColor: colors.border,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+
+        shadowOffset: {
+            width: 0,
+            height: 15,
+        },
+        shadowOpacity: 0.35,
+        shadowRadius: 35,
+        elevation: 25,
     },
 
     // HEADER
@@ -929,11 +957,12 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         color: colors.textSecondary,
     },
     amountInput: {
-        flex: 1,
-        fontSize: 28,
+        fontSize: 46,
         fontWeight: '700',
-        color: colors.champagne,
-        paddingVertical: 14,
+        minWidth: SCREEN_WIDTH * 0.45,
+        maxWidth: SCREEN_WIDTH * 0.62,
+        textAlign: 'center',
+        paddingVertical: 0,
     },
     // PERIOD
     periodRow: {
@@ -1006,18 +1035,18 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         borderColor: colors.border,
         marginTop: 10,
     },
-
-
-    // ==============================================
     // SUBMIT
-    // ==============================================
-
     submitButton: {
+        minHeight: 52,
+        borderRadius: 15,
         backgroundColor: colors.champagne,
-        borderRadius: 14,
-        paddingVertical: 16,
         alignItems: 'center',
-        marginTop: 8,
+        justifyContent: 'center',
+        marginTop: 2,
+        shadowOffset: { width: 0, height: 6, },
+        shadowOpacity: 0.18,
+        shadowRadius: 12,
+        elevation: 5,
     },
     submitText: {
         color: colors.background,
@@ -1074,6 +1103,79 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         right: 0,
         height: 3,
         backgroundColor: colors.champagne,
+    },
+    periodSelectorRow: {
+        flexDirection: 'row',
+        gap: 10,
+        height: 126,
+    },
+
+    periodWheelContainer: {
+        flex: 1,
+        height: 126,
+        position: 'relative',
+        overflow: 'hidden',
+        backgroundColor: colors.surfaceAlt,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    periodWheelItem: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    periodWheelText: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: colors.textMuted,
+    },
+
+    periodWheelTextActive: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: colors.champagne,
+    },
+
+    periodWheelSelection: {
+        position: 'absolute',
+        left: 8,
+        right: 8,
+        top: 42,
+        height: 42,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: colors.champagne + '55',
+        backgroundColor: colors.champagne + '08',
+        borderRadius: 10,
+    },
+
+    customPeriodButton: {
+        width: '28%',
+        minWidth: 90,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surfaceAlt,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+    },
+
+    customPeriodButtonActive: {
+        backgroundColor: colors.champagne,
+        borderColor: colors.champagne,
+    },
+
+    customPeriodText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+
+    customPeriodTextActive: {
+        color: colors.background,
     },
 
 });

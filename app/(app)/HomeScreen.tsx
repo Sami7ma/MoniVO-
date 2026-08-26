@@ -43,7 +43,7 @@ export default function HomeScreen() {
     //  navigation 
     const navigation = useNavigation();
 
-    // ── NUMBER FORMATTING ────────────────────────────────────────────────────────
+    // NUMBER FORMATTING
     const formatMoney = (amount: number) =>
         `ETB ${amount.toLocaleString('en-US', {
             minimumFractionDigits: 2,
@@ -58,7 +58,7 @@ export default function HomeScreen() {
     const greeting =
         hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-    // ── UI ──────────────────────────────────────────────────────────────────────
+    // UI 
     return (
         // SafeAreaView prevents content from going under the phone's notch/home bar
         <SafeAreaView
@@ -73,7 +73,7 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
 
-                {/* ── HEADER ─────────────────────────────────────────────────────── */}
+                {/* HEADER  */}
                 <View style={styles.header}>
                     <View>
                         <Text style={styles.greeting}>{greeting}
@@ -98,7 +98,7 @@ export default function HomeScreen() {
                     totalExpenses={totalExpenses()}
                 />
 
-                {/* ── ACTION BUTTONS ─────────────────────────────────────────── */}
+                {/*ACTION BUTTONS*/}
                 <View style={styles.actionsRow}>
                     <TouchableOpacity
                         style={[
@@ -161,7 +161,7 @@ export default function HomeScreen() {
 
                 </View>
 
-                {/* ── RECENT TRANSACTIONS ─────────────────────────────────────────── */}
+                {/* RECENT TRANSACTIONS */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Recent Transactions</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('Transactions' as never)}>
@@ -193,7 +193,7 @@ export default function HomeScreen() {
                 )}
 
             </ScrollView>
-            {/* ── ADD TRANSACTION MODAL ──────────────────────────────────── */}
+            {/* ADD TRANSACTION MODAL*/}
             <AddTransactionModal
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
@@ -203,8 +203,6 @@ export default function HomeScreen() {
     );
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
 const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
     safeArea: {
         flex: 1,

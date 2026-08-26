@@ -10,6 +10,7 @@ import useMoniVoStore from "../../store/useMoniVoStore";
 import BudgetCard from "../../components/home/BudgetCard";
 
 import AddBudgetModal from '../../components/modals/AddBudgetModal';
+import { Budget } from "../../types/Budget";
 
 
 export default function BudgetsScreen() {
@@ -38,26 +39,25 @@ export default function BudgetsScreen() {
     // Calculate how much was spent inside each budget's own start and end dates.
     // for now we use this month only
 
-    const spendByCategory = useMemo(() => {
-        // Get the current month's start ans end dates
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth());
 
-        // build a map:{categoryID: totalSpent}
-        const spentMap: Record<string, number> = {};
-        transactions.filter((tx) => {
-            // onlu count DEBIT (expenses), not income
-            if (tx.type !== 'DEBIT') return false;
-            // only count transactions from thsi month
-            const txDate = new Date(tx.date);
-            return txDate >= monthStart && txDate <= monthEnd;
-        }).forEach((tx) => {
-            // add up spending per category
-            spentMap[tx.categoryId] = (spentMap[tx.categoryId] || 0 + tx.amount);
-        });
-        return spentMap;
-    }, [transactions]);
+    const getSpentForBudget = (budget: Budget) => {
+        return transactions.filter(tx => {
+            if (tx.type !== 'DEBIT') {
+                return false;
+            }
+            if (tx.categoryId !== budget.categoryId) {
+                return false;
+            }
+            const txDate =
+                new Date(tx.date)
+                    .toISOString()
+                    .split('T')[0];
+            return (txDate >= budget.startDate && txDate <= budget.endDate);
+        }).reduce(
+            (total, tx) => total + tx.amount,
+            0
+        );
+    };
 
     //DELETE HANDLER 
     const handleDelete = (budgetId: string, categoryName: string) => {
@@ -81,7 +81,7 @@ export default function BudgetsScreen() {
     );
 
     const totalSpent = budgets.reduce(
-        (sum, budget) => sum + (spendByCategory[budget.id] || 0), 0
+        (sum, budget) => sum + (getSpentForBudget(budget) || 0), 0
     );
 
     // UI 
@@ -139,7 +139,7 @@ export default function BudgetsScreen() {
                     <BudgetCard
                         budget={item}
                         category={getCategoryById(item.categoryId)}
-                        spent={spendByCategory[item.categoryId] || 0}
+                        spent={getSpentForBudget(item) || 0}
                         onDelete={() =>
                             handleDelete(
                                 item.id,
@@ -171,108 +171,105 @@ export default function BudgetsScreen() {
     );
 }
 
-const createStyles = (
-    colors: ReturnType<typeof useTheme>
-) =>
-    StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
 
-        safeArea: {
-            flex: 1,
-            backgroundColor: colors.background,
-        },
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
 
-        header: {
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            paddingHorizontal: 10,
-            paddingTop: 16,
-            paddingBottom: 12,
-        },
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 10,
+        paddingTop: 16,
+        paddingBottom: 12,
+    },
 
-        headerTitle: {
-            fontSize: 28,
-            fontWeight: "bold",
-            color: colors.textPrimary,
-        },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: "bold",
+        color: colors.textPrimary,
+    },
 
-        headerSubtitle: {
-            fontSize: 14,
-            color: colors.textSecondary,
-            marginTop: 2,
-        },
+    headerSubtitle: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
 
-        addButton: {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: colors.champagne,
-            alignItems: "center",
-            justifyContent: "center",
-        },
+    addButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.champagne,
+        alignItems: "center",
+        justifyContent: "center",
+    },
 
-        summaryRow: {
-            flexDirection: "row",
-            marginHorizontal: 10,
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            padding: 10,
-            marginBottom: 5,
-            borderWidth: 1,
-            borderColor: colors.border,
-        },
+    summaryRow: {
+        flexDirection: "row",
+        marginHorizontal: 10,
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: 10,
+        marginBottom: 5,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
 
-        summaryItem: {
-            flex: 1,
-            alignItems: "center",
-            gap: 4,
-        },
+    summaryItem: {
+        flex: 1,
+        alignItems: "center",
+        gap: 4,
+    },
 
-        summaryLabel: {
-            fontSize: 12,
-            color: colors.textSecondary,
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-        },
+    summaryLabel: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
 
-        summaryValue: {
-            fontSize: 18,
-            fontWeight: "700",
-            color: colors.textPrimary,
-        },
+    summaryValue: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: colors.textPrimary,
+    },
 
-        summaryDivider: {
-            width: 1,
-            backgroundColor: colors.border,
-            marginHorizontal: 12,
-        },
+    summaryDivider: {
+        width: 1,
+        backgroundColor: colors.border,
+        marginHorizontal: 12,
+    },
 
-        listContent: {
-            paddingHorizontal: 10,
-            paddingBottom: 32,
-        },
+    listContent: {
+        paddingHorizontal: 10,
+        paddingBottom: 32,
+    },
 
-        emptyState: {
-            alignItems: "center",
-            justifyContent: "center",
-            paddingTop: 100,
-            gap: 8,
-        },
+    emptyState: {
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: 100,
+        gap: 8,
+    },
 
-        emptyIcon: {
-            marginBottom: 8,
-            color: colors.champagne,
-        },
+    emptyIcon: {
+        marginBottom: 8,
+        color: colors.champagne,
+    },
 
-        emptyTitle: {
-            fontSize: 16,
-            fontWeight: "600",
-            color: colors.textPrimary,
-        },
+    emptyTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: colors.textPrimary,
+    },
 
-        emptySubtitle: {
-            fontSize: 14,
-            color: colors.textSecondary,
-            textAlign: "center",
-        },
-    });
+    emptySubtitle: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        textAlign: "center",
+    },
+});
