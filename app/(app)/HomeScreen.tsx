@@ -63,7 +63,7 @@ export default function HomeScreen() {
         // SafeAreaView prevents content from going under the phone's notch/home bar
         <SafeAreaView
             style={styles.safeArea}
-            edges={['top', 'left', 'right']}
+            edges={['top', 'left', 'right', 'bottom']}
         >
             <StatusBar style={colors.statusBar} />
 
