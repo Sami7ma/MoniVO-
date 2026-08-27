@@ -70,8 +70,7 @@ export default function HomeScreen() {
             <ScrollView
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
+                contentContainerStyle={styles.scrollContent}>
 
                 {/* HEADER  */}
                 <View style={styles.header}>

@@ -8,6 +8,7 @@ import { Plus, NotebookPen } from "lucide-react-native";
 import useTheme from "../../hooks/useTheme";
 import useMoniVoStore from "../../store/useMoniVoStore";
 import BudgetCard from "../../components/home/BudgetCard";
+import FloatingActionButton from "../../components/common/FloatingActionButton";
 
 import AddBudgetModal from '../../components/modals/AddBudgetModal';
 import { Budget } from "../../types/Budget";
@@ -95,13 +96,10 @@ export default function BudgetsScreen() {
                         {budgets.length} active budget{budgets.length !== 1 ? 's' : ''}
                     </Text>
                 </View>
-                <TouchableOpacity
-                    style={styles.addButton}
+                {/* + button — uses reusable FloatingActionButton */}
+                <FloatingActionButton
                     onPress={() => setModalVisible(true)}
-                    activeOpacity={0.8}
-                >
-                    <Plus size={20} color={colors.background} />
-                </TouchableOpacity>
+                />
             </View>
             {/* summary row */}
             {budgets.length > 0 && (
@@ -199,14 +197,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         marginTop: 2,
     },
 
-    addButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: colors.champagne,
-        alignItems: "center",
-        justifyContent: "center",
-    },
+    // addButton REMOVED
+    // → now handled by FloatingActionButton component
 
     summaryRow: {
         flexDirection: "row",

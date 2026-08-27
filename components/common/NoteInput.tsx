@@ -12,12 +12,7 @@
 // styling for all text areas in the app.
 
 import React from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, } from 'react-native';
 import useTheme from '../../hooks/useTheme';
 
 interface NoteInputProps {

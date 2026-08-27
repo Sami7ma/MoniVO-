@@ -32,12 +32,7 @@ interface PrimaryButtonProps {
     style?: ViewStyle;    // Optional — extra styles from the parent
 }
 
-export default function PrimaryButton({
-    label,
-    onPress,
-    color,
-    style,
-}: PrimaryButtonProps) {
+export default function PrimaryButton({ label, onPress, color, style, }: PrimaryButtonProps) {
     const colors = useTheme();
     const styles = createStyles(colors);
 
@@ -73,8 +68,6 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             justifyContent: 'center',
         },
         label: {
-            // Text is always the background color — this creates
-            // contrast against the bold button color (gold, red, green)
             color: colors.background,
             fontSize: 16,
             fontWeight: 'bold',

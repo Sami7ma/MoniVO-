@@ -15,20 +15,12 @@
 //   ┌─────────────────────┐
 //   │ ETB   0.00          │
 //   └─────────────────────┘
-//
-// WHY A COMPONENT?
 // Both modals need a money input. By extracting it,
 // we guarantee the same keyboard type, placeholder,
 // and styling logic in both places.
 
 import React from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
-    Dimensions,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, Dimensions } from 'react-native';
 import useTheme from '../../hooks/useTheme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -46,6 +38,7 @@ export default function AmountInput({
     variant = 'large',     // default to large if not specified
     autoFocus = false,
 }: AmountInputProps) {
+
     const colors = useTheme();
     const styles = createStyles(colors);
 

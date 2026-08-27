@@ -1,13 +1,6 @@
 // components/common/CategoryPicker.tsx
 //
 // A dropdown category selector with an expandable list.
-//
-// HOW IT WORKS:
-// 1. Shows a button with the selected category name (or placeholder)
-// 2. When tapped, expands a scrollable list of categories
-// 3. Selected category gets a gold highlight + checkmark
-// 4. Tapping a category selects it and closes the list
-//
 // WHERE IT'S USED:
 // - AddTransactionModal (pick expense or income category)
 // - AddBudgetModal (pick expense category for budget)
@@ -18,13 +11,7 @@
 // have the exact same selection experience.
 
 import React, { useState } from 'react';
-import {
-    View,
-    Text,
-    TouchableOpacity,
-    ScrollView,
-    StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
 import useTheme from '../../hooks/useTheme';
 import type { Category } from '../../types/Category';
@@ -44,19 +31,14 @@ export default function CategoryPicker({
     placeholder = 'Select a category',
     label = 'Category',
 }: CategoryPickerProps) {
+
     const colors = useTheme();
     const styles = createStyles(colors);
 
     // Internal state — controls whether the dropdown list is visible.
-    // This state lives HERE (not in the parent) because the parent
-    // doesn't care whether the dropdown is open or closed —
-    // it only cares about which category is SELECTED.
     const [isOpen, setIsOpen] = useState(false);
-
     // Find the full category object from the selected ID
-    const selectedCategory = categories.find(
-        (cat) => cat.id === selectedId
-    );
+    const selectedCategory = categories.find((cat) => cat.id === selectedId);
 
     return (
         <View style={styles.container}>
@@ -67,8 +49,7 @@ export default function CategoryPicker({
             <TouchableOpacity
                 activeOpacity={0.8}
                 style={styles.selectorButton}
-                onPress={() => setIsOpen(!isOpen)}
-            >
+                onPress={() => setIsOpen(!isOpen)}>
                 <Text
                     style={[
                         styles.selectorText,
