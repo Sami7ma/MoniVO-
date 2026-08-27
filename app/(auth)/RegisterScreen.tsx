@@ -13,6 +13,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from "lucide-react-native";
 import useTheme from "../../hooks/useTheme";
+import PrimaryButton from '../../components/common/PrimaryButton';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
 
@@ -153,14 +154,12 @@ export default function RegisterScreen({ navigation }: Props) {
                             </TouchableOpacity>
                         </View>
                     </View>
-                    {/* REGISTER BUTTON */}
-                    <TouchableOpacity
-                        style={styles.registerButton}
+                    {/* REGISTER BUTTON — uses reusable PrimaryButton */}
+                    <PrimaryButton
+                        label="Create Account"
                         onPress={handleRegister}
-                        activeOpacity={0.85}
-                    >
-                        <Text style={styles.registerButtonText}>Create Account</Text>
-                    </TouchableOpacity>
+                        style={{ marginTop: 8 }}
+                    />
                 </View>
                 {/* LOGIN LINK */}
                 <View style={styles.loginRow}>
@@ -257,19 +256,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
     eyeButton: {
         padding: 14,
     },
-    registerButton: {
-        backgroundColor: colors.champagne,
-        borderRadius: 14,
-        paddingVertical: 16,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    registerButtonText: {
-        color: colors.background,
-        fontSize: 17,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
+    // registerButton and registerButtonText REMOVED
+    // → now handled by PrimaryButton component
     loginRow: {
         flexDirection: 'row',
         justifyContent: 'center',

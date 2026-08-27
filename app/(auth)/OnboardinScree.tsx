@@ -15,6 +15,7 @@ import {
 
 import { StatusBar } from 'expo-status-bar';
 import useTheme from '../../hooks/useTheme';
+import PrimaryButton from '../../components/common/PrimaryButton';
 
 
 // SLIDE DATA
@@ -135,17 +136,12 @@ export default function OnboardingScreen({ navigation }: Props) {
                         />
                     ))}
                 </View>
-                {/* Next/ get started button*/}
-                <TouchableOpacity
-                    style={styles.button}
+                {/* Next / Get Started button — uses reusable PrimaryButton */}
+                <PrimaryButton
+                    label={activeIndex === slides.length - 1 ? 'Get Started' : 'Next'}
                     onPress={handleNext}
-                    activeOpacity={0.8}
-                >
-                    <Text style={styles.buttonText}>
-                        {/* show doffrent tect on the last slide */}
-                        {activeIndex === slides.length - 1 ? 'Get Started' : 'Next'}
-                    </Text>
-                </TouchableOpacity>
+                    style={{ width: SCREEN_WIDTH - 80 }}
+                />
                 {/* skip link - onlu show on slides 1 and 2, not  the last */}
                 {activeIndex < slides.length - 1 && (
                     <TouchableOpacity onPress={() => setActiveIndex(slides.length - 1)}>
@@ -211,22 +207,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         width: 8,
         backgroundColor: colors.textSecondary
     },
-    button: {
-        backgroundColor: colors.champagne,
-        paddingHorizontal: 55,
-        paddingVertical: 16,
-        borderRadius: 14,
-        width: SCREEN_WIDTH - 80, // centered button with 40px padding on each side
-        alignItems: 'center',
-
-    },
-    buttonText: {
-        color: colors.background,
-        fontSize: 18,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-
-    },
+    // button and buttonText REMOVED
+    // → now handled by PrimaryButton component
     skipText: {
         fontSize: 14,
         color: colors.textSecondary,

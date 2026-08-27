@@ -2,28 +2,43 @@
 //
 // MoniVo — Add Income / Add Expense modal
 //
-// Design:
-// - Floating glassmorphism card
-// - Centered on screen
-// - HomeScreen remains visible behind it
-// - Theme-aware using useTheme()
-// - No hardcoded Colors import
-// - Dark/light mode supported
-// - Expense = danger
-// - Income = success
-// - Champagne/gold used for MoniVo accents
+// NOW USES REUSABLE COMPONENTS:
+// - CloseButton     → modal header X button
+// - AmountInput     → ETB amount field (large variant)
+// - CategoryPicker  → dropdown category selector
+// - NoteInput       → optional note text area
+// - PrimaryButton   → submit button
 //
+// Styles that were moved INTO those components
+// have been REMOVED from this file's stylesheet.
 
 import React, { useEffect, useState } from 'react';
 
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, Dimensions, Pressable, } from 'react-native';
-import { X, ChevronDown, Check, } from 'lucide-react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    Modal,
+    ScrollView,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+} from 'react-native';
 
 import { Transaction } from '../../types/Transaction';
 import useMoniVoStore from '../../store/useMoniVoStore';
 import useTheme from '../../hooks/useTheme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// ── REUSABLE COMPONENTS ──────────────────────────────────
+// These used to be inline JSX + styles in this file.
+// Now they're shared components used by multiple screens.
+import CloseButton from '../common/CloseButton';
+import AmountInput from '../common/AmountInput';
+import CategoryPicker from '../common/CategoryPicker';
+import NoteInput from '../common/NoteInput';
+import PrimaryButton from '../common/PrimaryButton';
+
 // PROPS
 interface AddTransactionModalProps {
     visible: boolean;
@@ -48,7 +63,6 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-    const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
     // RESET FORM
 
@@ -58,14 +72,10 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
             setAmount('');
             setNote('');
             setSelectedCategoryId('');
-            setShowCategoryPicker(false);
         }
     }, [defaultType, visible]);
 
     // CATEGORY    
-    const selectedCategory = categories.find(
-        (category) => category.id === selectedCategoryId
-    );
     const filteredCategories = categories.filter((category) =>
         type === 'DEBIT'
             ? category.flow === 'EXPENSE'
@@ -82,7 +92,7 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
             return;
         }
         // Validate category
-        if (!selectedCategory) {
+        if (!selectedCategoryId) {
             alert('Please select a category');
             return;
         }
@@ -159,13 +169,9 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
                                 </Text>
                             </View>
 
-                            <TouchableOpacity
-                                onPress={onClose}
-                                style={styles.closeButton}
-                                activeOpacity={0.7}
-                            >
-                                <X size={20} color={colors.textSecondary} strokeWidth={2} />
-                            </TouchableOpacity>
+                            {/* ← Was ~8 lines of inline TouchableOpacity + X icon.
+                                Now it's one component! */}
+                            <CloseButton onPress={onClose} />
 
                         </View>
 
@@ -243,158 +249,35 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
                             </View>
 
 
-                            {/* AMOUNT */}
+                            {/* AMOUNT — was ~15 lines, now 1 component */}
+                            <AmountInput
+                                value={amount}
+                                onChangeText={setAmount}
+                                variant="large"
+                                autoFocus
+                            />
 
-                            <View style={styles.amountSection}>
-                                <Text style={[styles.currency, { color: colors.textSecondary, },]}>
-                                    ETB
-                                </Text>
+                            {/* CATEGORY — was ~60 lines, now 1 component */}
+                            <CategoryPicker
+                                categories={filteredCategories}
+                                selectedId={selectedCategoryId}
+                                onSelect={setSelectedCategoryId}
+                                placeholder="Select a category"
+                            />
 
-                                <TextInput
-                                    style={[styles.amountInput, { color: colors.champagne, },]}
-                                    value={amount}
-                                    onChangeText={setAmount}
-                                    placeholder="0.00"
-                                    placeholderTextColor={colors.textMuted + '70'}
-                                    keyboardType="decimal-pad"
-                                    autoFocus
-                                />
+                            {/* NOTE — was ~15 lines, now 1 component */}
+                            <NoteInput
+                                value={note}
+                                onChangeText={setNote}
+                            />
 
-                            </View>
-
-
-                            {/* CATEGORY */}
-
-                            <View style={styles.fieldGroup}>
-
-                                <Text style={styles.label}>
-                                    Category
-                                </Text>
-
-                                <TouchableOpacity
-                                    activeOpacity={0.8}
-                                    style={styles.selectorButton}
-                                    onPress={() =>
-                                        setShowCategoryPicker(!showCategoryPicker)
-                                    }>
-
-                                    <Text
-                                        style={[styles.selectorText,
-                                        {
-                                            color: selectedCategory ? colors.textPrimary : colors.textMuted,
-                                        },
-                                        ]}
-                                    >
-                                        {selectedCategory?.name ?? 'Select a category'}
-                                    </Text>
-
-                                    <ChevronDown
-                                        size={18}
-                                        color={colors.textSecondary}
-                                    />
-
-                                </TouchableOpacity>
-
-
-                                {/* Category dropdown */}
-
-                                {showCategoryPicker && (
-
-                                    <View style={styles.categoryList}>
-
-                                        <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
-
-                                            {filteredCategories.map(
-                                                (category) => {
-                                                    const isSelected = category.id === selectedCategoryId;
-                                                    return (
-                                                        <TouchableOpacity
-                                                            key={category.id}
-                                                            activeOpacity={0.7}
-                                                            style={[
-                                                                styles.categoryItem,
-                                                                {
-                                                                    backgroundColor: isSelected
-                                                                        ? colors.champagne + '12'
-                                                                        : 'transparent',
-                                                                },
-                                                            ]}
-                                                            onPress={() => {
-                                                                setSelectedCategoryId(category.id);
-                                                                setShowCategoryPicker(false);
-                                                            }}
-                                                        >
-
-                                                            <Text
-                                                                style={[
-                                                                    styles.categoryItemText,
-                                                                    {
-                                                                        color: isSelected
-                                                                            ? colors.champagne
-                                                                            : colors.textPrimary,
-                                                                    },
-                                                                ]}
-                                                            >
-                                                                {category.name}
-                                                            </Text>
-                                                            {isSelected && (
-                                                                <Check size={17} color={colors.champagne} />
-                                                            )}
-
-                                                        </TouchableOpacity>
-                                                    );
-                                                }
-                                            )}
-
-                                        </ScrollView>
-
-                                    </View>
-                                )}
-
-                            </View>
-
-
-                            {/* NOTE*/}
-
-                            <View style={styles.fieldGroup}>
-                                <Text style={styles.label}>
-                                    Note
-                                    <Text style={{ color: colors.textMuted }}> {' '} Optional </Text>
-                                </Text>
-
-                                <TextInput
-                                    style={styles.noteInput}
-                                    value={note}
-                                    onChangeText={setNote}
-                                    placeholder="e.g. Coffee at Tomoca"
-                                    placeholderTextColor={colors.textMuted}
-                                    multiline
-                                    numberOfLines={2}
-                                    textAlignVertical="top"
-                                />
-
-                            </View>
-
-
-                            {/* SUBMIT*/}
-
-                            <TouchableOpacity
-                                activeOpacity={0.78}
+                            {/* SUBMIT — was ~10 lines, now 1 component */}
+                            <PrimaryButton
+                                label={type === 'CREDIT' ? 'Add Income' : 'Add Expense'}
                                 onPress={handleSubmit}
-                                style={[
-                                    styles.submitButton,
-                                    {
-                                        backgroundColor: accentColor,
-                                        shadowColor: accentColor,
-                                    },
-                                ]}
-                            >
-                                <Text style={styles.submitText}>
-                                    {type === 'CREDIT'
-                                        ? 'Add Income'
-                                        : 'Add Expense'}
-                                </Text>
-                            </TouchableOpacity>
+                                color={accentColor}
+                            />
+
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
@@ -403,6 +286,15 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
     );
 }
 // STYLES
+// ─────────────────────────────────────────────────────────
+// CLEANED UP: Removed all styles that now live inside
+// the reusable components:
+// - closeButton       → CloseButton component
+// - amountSection, currency, amountInput → AmountInput component
+// - selectorButton, selectorText, categoryList,
+//   categoryItem, categoryItemText → CategoryPicker component
+// - noteInput         → NoteInput component
+// - submitButton, submitText → PrimaryButton component
 
 const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create({
     // Full screen transparent modal.
@@ -471,15 +363,6 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         color: colors.textPrimary,
         letterSpacing: -0.3,
     },
-    closeButton: {
-        width: 38,
-        height: 38,
-        borderRadius: 19,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: colors.border
-    },
     // SCROLL
     scroll: {
         flexGrow: 0,
@@ -516,29 +399,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         fontSize: 14,
         fontWeight: '600',
     },
-    // AMOUNT
-    amountSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 100,
-        gap: 8,
-    },
-    currency: {
-        fontSize: 17,
-        fontWeight: '500',
-        marginTop: 8,
-    },
-    amountInput: {
-        fontSize: 46,
-        fontWeight: '700',
-        minWidth: SCREEN_WIDTH * 0.45,
-        maxWidth: SCREEN_WIDTH * 0.62,
-        textAlign: 'center',
-        paddingVertical: 0,
-    },
-
-    // FIELDS
+    // FIELDS — only the label + fieldGroup remain
+    // (everything else moved to components)
     fieldGroup: {
         gap: 8,
     },
@@ -548,83 +410,5 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         letterSpacing: 1,
         color: colors.textSecondary,
         textTransform: 'uppercase',
-    },
-    selectorButton: {
-        minHeight: 50,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        borderRadius: 14,
-        borderWidth: 1,
-        backgroundColor: colors.surfaceAlt,
-        borderColor: colors.border,
-    },
-    selectorText: {
-        fontSize: 15,
-        fontWeight: '500',
-    },
-    // CATEGORY LIST
-
-    categoryList: {
-        maxHeight: 170,
-        marginTop: 6,
-        borderRadius: 14,
-        borderWidth: 1,
-        overflow: 'hidden',
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-    },
-
-    categoryItem: {
-        minHeight: 48,
-        paddingHorizontal: 15,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-
-    categoryItemText: {
-        fontSize: 14,
-        fontWeight: '500',
-    },
-
-    // NOTE
-    noteInput: {
-        minHeight: 72,
-        borderRadius: 14,
-        borderWidth: 1,
-        paddingHorizontal: 15,
-        paddingTop: 13,
-        paddingBottom: 12,
-        fontSize: 14,
-        lineHeight: 20,
-        backgroundColor: colors.surfaceAlt,
-        borderColor: colors.border,
-        color: colors.textPrimary,
-    },
-    // SUBMIT
-    submitButton: {
-        minHeight: 52,
-        borderRadius: 15,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 2,
-        shadowOffset: {
-            width: 0,
-            height: 6,
-        },
-        shadowOpacity: 0.18,
-        shadowRadius: 12,
-        elevation: 5,
-    },
-
-    submitText: {
-        color: '#FFFFFF',
-        fontSize: 15,
-        fontWeight: '700',
-        letterSpacing: 0.4,
     },
 });

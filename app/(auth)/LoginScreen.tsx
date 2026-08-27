@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from 'lucide-react-native';
 import useTheme from '../../hooks/useTheme';
 import useMoniVoStore from '../../store/useMoniVoStore';
+import PrimaryButton from '../../components/common/PrimaryButton';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
 
@@ -137,14 +138,12 @@ export default function LoginScreen({ navigation }: Props) {
                     <TouchableOpacity style={styles.forgotContainer}>
                         <Text style={styles.forgotText}>Forgot password?</Text>
                     </TouchableOpacity>
-                    {/* Login Button */}
-                    <TouchableOpacity
-                        style={styles.loginButton}
+                    {/* Login Button — uses reusable PrimaryButton */}
+                    <PrimaryButton
+                        label="Sign In"
                         onPress={handleLogin}
-                        activeOpacity={0.85}
-                    >
-                        <Text style={styles.loginButtonText}>Sign In</Text>
-                    </TouchableOpacity>
+                        style={{ marginTop: 8 }}
+                    />
                 </View>
                 {/* Register Link */}
                 <View style={styles.registerRow}>
@@ -254,19 +253,8 @@ const createStyles = (colors: ReturnType<typeof useTheme>) => StyleSheet.create(
         color: colors.textSecondary,
         fontSize: 14,
     },
-    loginButton: {
-        backgroundColor: colors.champagne,
-        borderRadius: 14,
-        paddingVertical: 16,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    loginButtonText: {
-        color: colors.background,   // Dark text on gold button
-        fontSize: 17,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
+    // loginButton and loginButtonText REMOVED
+    // → now handled by PrimaryButton component
     registerRow: {
         flexDirection: 'row',
         justifyContent: 'center',
