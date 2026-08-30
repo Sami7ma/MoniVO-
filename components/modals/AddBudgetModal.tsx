@@ -199,9 +199,7 @@ export default function AddBudgetModal({
     );
 }
 
-// ══════════════════════════════════════════════════════════
 // STYLES — CLEANED UP
-// ══════════════════════════════════════════════════════════
 // REMOVED styles that now live in components:
 // - closeButton → CloseButton
 // - amountRow, currency, amountInput → AmountInput
