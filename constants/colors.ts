@@ -1,4 +1,4 @@
-// thsi use to be but not anymore i think hook of htem eis better
+// thsi use to be but not anymore i think hook of htem eis better 
 // // This file is the source of truth for all color constants
 // // so if you want to change any color change it here and it updates it everywhere
 

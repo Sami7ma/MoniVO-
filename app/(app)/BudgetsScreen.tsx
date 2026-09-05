@@ -8,7 +8,7 @@ import { Plus, NotebookPen } from "lucide-react-native";
 import useTheme from "../../hooks/useTheme";
 import useMoniVoStore from "../../store/useMoniVoStore";
 import BudgetCard from "../../components/home/BudgetCard";
-import FloatingActionButton from "../../components/common/FloatingActionButton";
+import FloatingActionButton from "../../components/common/buttons/FloatingActionButton";
 
 import AddBudgetModal from '../../components/modals/AddBudgetModal';
 import { Budget } from "../../types/Budget";
@@ -36,11 +36,8 @@ export default function BudgetsScreen() {
         categories.find((cat) => cat.id === id);
 
     // CALCULATE SPENT PER CATEGORY
-
     // Calculate how much was spent inside each budget's own start and end dates.
     // for now we use this month only
-
-
     const getSpentForBudget = (budget: Budget) => {
         return transactions.filter(tx => {
             if (tx.type !== 'DEBIT') {

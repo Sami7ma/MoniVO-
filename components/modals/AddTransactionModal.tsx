@@ -33,11 +33,11 @@ import useTheme from '../../hooks/useTheme';
 // ── REUSABLE COMPONENTS ──────────────────────────────────
 // These used to be inline JSX + styles in this file.
 // Now they're shared components used by multiple screens.
-import CloseButton from '../common/CloseButton';
-import AmountInput from '../common/AmountInput';
-import CategoryPicker from '../common/CategoryPicker';
-import NoteInput from '../common/NoteInput';
-import PrimaryButton from '../common/PrimaryButton';
+import CloseButton from '../common/buttons/CloseButton';
+import AmountInput from '../common/inputs/AmountInput';
+import CategoryPicker from '../common/selectors/CategoryPicker';
+import NoteInput from '../common/inputs/NoteInput';
+import PrimaryButton from '../common/buttons/PrimaryButton';
 
 // PROPS
 interface AddTransactionModalProps {

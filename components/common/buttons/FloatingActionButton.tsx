@@ -19,7 +19,7 @@ import {
     ViewStyle,
 } from 'react-native';
 import { Plus } from 'lucide-react-native';
-import useTheme from '../../hooks/useTheme';
+import useTheme from '../../../hooks/useTheme';
 
 interface FloatingActionButtonProps {
     onPress: () => void;

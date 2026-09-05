@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, } from 'react-native';
-import useTheme from '../../hooks/useTheme';
+import useTheme from '../../../hooks/useTheme';
 
 interface NoteInputProps {
     value: string;

@@ -15,7 +15,7 @@ import {
 
 import { StatusBar } from 'expo-status-bar';
 import useTheme from '../../hooks/useTheme';
-import PrimaryButton from '../../components/common/PrimaryButton';
+import PrimaryButton from '../../components/common/buttons/PrimaryButton';
 
 
 // SLIDE DATA

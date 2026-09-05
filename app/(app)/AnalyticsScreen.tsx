@@ -1,88 +1,94 @@
-// this page reads transacion form Zustand
-// has period tabs(Week, Month, Year)
+// app/(app)/AnalyticsScreen.tsx
+//
+// The analytics tab — spending trends and category breakdowns.
+//
+// REFACTORED: This screen now only handles DATA and LOGIC.
+// All UI rendering is delegated to dedicated components:
+//   - SummaryCards     → income vs expenses cards
+//   - PeriodTabs       → Week/Month/Year animated selector
+//   - SpendingLineChart → the line graph
+//   - TopSpendingList  → category breakdown rows
+//
 // Data Flow:
 // 1. Read transactions + categories from Zustand
-// 2. User selects period: Week / Month / Year
-// 3. Group expenses by day/week/month into chart data
-// 4. Also compute top spending categories with percentages
-// 5. Pass chart data to SpendingLineChart
-
-// why useMemo?
-// Groupn hunderds fo transacon by date is expesnive
-// UseMemo caches the result - onl recalculates when
-// transaction or the selected periond changes
-
-// why useState?
-// to track the active tab (Week/Month/Year)
-// when user taps a tab, useState updates,
-// component re-renders with the new period
+// 2. User selects period via PeriodTabs → updates local state
+// 3. useMemo groups expenses into time buckets for the chart
+// 4. useMemo groups expenses by category for the top spending list
+// 5. Computed data is passed as props to child components
 
 import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, Dimensions, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import useTheme from "../../hooks/useTheme";
-import useMoniVoStore from '../../store/useMoniVoStore';
-import SpendingLineChart from "../../components/common/charts/SpendingPiechart";
-import { FileVideoIcon, TrendingUp, TrendingDown, } from "lucide-react-native";
 import { StatusBar } from "expo-status-bar";
 
-// period tabs
+import useTheme from "../../hooks/useTheme";
+import useMoniVoStore from "../../store/useMoniVoStore";
+
+// ── COMPONENTS ───────────────────────────────────────────
+// Each one handles its own UI + styles.
+// This screen just passes data to them.
+import SummaryCards from "../../components/common/charts/SummaryCards";
+import PeriodTabs from "../../components/common/buttons/PeriodTabs";
+import SpendingLineChart from "../../components/common/charts/SpendingLineChart";
+import TopSpendingList, { SpendingCategory } from "../../components/common/charts/TopSpendingList";
+
+// ── TYPES ────────────────────────────────────────────────
 type Period = 'Week' | 'Month' | 'Year';
 
-// Each category gets a unique dot color.
+// ── CONSTANTS ────────────────────────────────────────────
+// Colors for the top spending list dots
 const CATEGORY_COLORS = [
     '#C9A84C', '#E74C3C', '#2ECC71', '#3498DB',
     '#9B59B6', '#E67E22', '#1ABC9C', '#F39C12',
     '#E91E63', '#00BCD4', '#8BC34A', '#FF5722',
 ];
-// helper get month name shor
+
+// Short month and day name lookups
 const MONTH_NAMES = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
-// helpert get date name short
 const DAY_NAMES = [
-    'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+    'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat',
 ];
-// helper format curreny
-const formatCurrency = (amount: number): string => {
-    return `ETB ${amount.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    })}`;
-};
+
+// ══════════════════════════════════════════════════════════
+// SCREEN
+// ══════════════════════════════════════════════════════════
 export default function AnalyticsScreen() {
     const colors = useTheme();
     const styles = createStyles(colors);
 
-    // local state
+    // ── LOCAL STATE ──────────────────────────────────────
     const [period, setPeriod] = useState<Period>('Month');
-    // get data form zustand
+
+    // ── ZUSTAND ──────────────────────────────────────────
     const transactions = useMoniVoStore((state) => state.transactions);
     const categories = useMoniVoStore((state) => state.categories);
     const totalIncome = useMoniVoStore((state) => state.totalIncome);
     const totalExpenses = useMoniVoStore((state) => state.totalExpenses);
 
-    // helper: find category name by ID
-    const getCategoryName = (id: string) => categories.find((cat) => cat.id === id)?.name ?? 'Unknown'
+    // ── HELPER ───────────────────────────────────────────
+    const getCategoryName = (id: string) =>
+        categories.find((cat) => cat.id === id)?.name ?? 'Unknown';
 
-    // compute char data based on selected period
-    // this is the hear of the ansalyisc scren
-    // It groups expenses into time buckets for the chart.
+    // ── COMPUTE: chart data based on period ──────────────
+    // Groups expenses into time buckets for the line chart.
+    // useMemo caches the result — only recalculates when
+    // transactions or period changes.
     const chartData = useMemo(() => {
         const now = new Date();
         const expenses = transactions.filter((tx) => tx.type === 'DEBIT');
+
         if (period === 'Week') {
-            // creaet 7 buckets, one per day
+            // 7 buckets, one per day
             const labels: string[] = [];
             const values: number[] = [];
             for (let i = 6; i >= 0; i--) {
                 const d = new Date(now);
                 d.setDate(now.getDate() - i);
-                const dateStr = d.toDateString().split('T')[0];
-                // label "MON", "TUE" from d
+                const dateStr = d.toISOString().split('T')[0];
                 labels.push(DAY_NAMES[d.getDay()]);
-                // sum all expenses for that day
                 const dayTotal = expenses
                     .filter((tx) => tx.date.split('T')[0] === dateStr)
                     .reduce((sum, tx) => sum + tx.amount, 0);
@@ -90,21 +96,21 @@ export default function AnalyticsScreen() {
             }
             return { labels, values };
         }
-        if (period == 'Month') {
+
+        if (period === 'Month') {
+            // 4 buckets, one per week
             const labels: string[] = [];
             const values: number[] = [];
             for (let i = 3; i >= 0; i--) {
                 const weekEnd = new Date(now);
-                // this is geeting week end by subtracting 7 dates for each iteration
                 weekEnd.setDate(now.getDate() - (i * 7));
                 const weekStart = new Date(weekEnd);
                 weekStart.setDate(weekEnd.getDate() - 6);
                 labels.push(
-                    `${MONTH_NAMES[weekStart.getMonth()]}  ${weekStart.getDate()}`
+                    `${MONTH_NAMES[weekStart.getMonth()]} ${weekStart.getDate()}`
                 );
-                const startStr = weekStart.toDateString().split('T')[0];
-                const endStr = weekEnd.toDateString().split('T')[0];
-                // sum all expenses for this week
+                const startStr = weekStart.toISOString().split('T')[0];
+                const endStr = weekEnd.toISOString().split('T')[0];
                 const weekTotal = expenses
                     .filter((tx) => {
                         const txDate = tx.date.split('T')[0];
@@ -115,16 +121,15 @@ export default function AnalyticsScreen() {
             }
             return { labels, values };
         }
-        // YEAR: show last 6 months
+
+        // Year: 6 buckets, one per month
         const labels: string[] = [];
         const values: number[] = [];
         for (let i = 5; i >= 0; i--) {
             const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const monthIndex = monthDate.getMonth();
             const year = monthDate.getFullYear();
-            // Label: "Jun", "Jul", etc.
             labels.push(MONTH_NAMES[monthIndex]);
-            // Sum all expenses in this month
             const monthTotal = expenses
                 .filter((tx) => {
                     const txDate = new Date(tx.date);
@@ -136,17 +141,19 @@ export default function AnalyticsScreen() {
         }
         return { labels, values };
     }, [transactions, period]);
-    // compute top spending categories
-    // group all expenses by category, sum, sort by highest spend
-    const topSpending = useMemo(() => {
+
+    // ── COMPUTE: top spending categories ─────────────────
+    // Groups expenses by category, sums, sorts by highest.
+    // Also calculates percentage for each category.
+    const topSpending: SpendingCategory[] = useMemo(() => {
         const expenses = transactions.filter((tx) => tx.type === 'DEBIT');
-        // reduce() builds: { "cat-1": 500, "cat-4": 200, ... }
+
         const grouped = expenses.reduce((acc, tx) => {
             acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
             return acc;
         }, {} as Record<string, number>);
-        // Convert to array, add names + colors, sort highest first
-        return Object.entries(grouped)
+
+        const sorted = Object.entries(grouped)
             .map(([categoryId, amount], index) => ({
                 categoryId,
                 name: getCategoryName(categoryId),
@@ -154,62 +161,79 @@ export default function AnalyticsScreen() {
                 color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
             }))
             .sort((a, b) => b.amount - a.amount);
+
+        // Calculate percentages
+        const total = sorted.reduce((sum, cat) => sum + cat.amount, 0);
+        return sorted.map((cat) => ({
+            ...cat,
+            percentage: total > 0
+                ? ((cat.amount / total) * 100).toFixed(1)
+                : '0',
+        }));
     }, [transactions, categories]);
-    // Total spent(for percentage calucation)
-    const totalSpent = topSpending.reduce((sum, cat) => sum + cat.amount, 0);
-    // UI
+
+    // ── UI ───────────────────────────────────────────────
+    // Notice how clean this is now — just components + data.
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <StatusBar style={colors.statusBar} />
+
+            {/* HEADER */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Analytics</Text>
                 <Text style={styles.headerSubtitle}>
                     Your spending overview
                 </Text>
             </View>
+
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* summary cards */}
-                <View style={styles.summaryRow}>
-                    <View style={styles.summaryCard}>
-                        <View style={styles.summaryIconRow}>
-                            <TrendingUp size={18} color={colors.success} />
-                            <Text style={styles.summaryLabel}>
-                                Income
-                            </Text>
-                        </View>
-                        <Text style={[styles.summaryAmount, { color: colors.success }]}>
-                            ETB {totalIncome().toLocaleString()}
-                        </Text>
-                    </View>
-                    <View style={styles.summaryCard}>
-                        <View style={styles.summaryIconRow}>
-                            <TrendingDown size={18} color={colors.danger} />
-                            <Text style={styles.summaryLabel}>Expenses</Text>
-                        </View>
-                        <Text
-                            style={[styles.summaryAmount, { color: colors.danger }]}
-                        >
-                            ETB {totalExpenses().toLocaleString()}
-                        </Text>
-                    </View>
+                {/* INCOME vs EXPENSES — was 25 lines, now 1 component */}
+                <SummaryCards
+                    totalIncome={totalIncome()}
+                    totalExpenses={totalExpenses()}
+                />
+
+                {/* SPENDING TREND — chart + period selector */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Spending Trend</Text>
+
+                    {/* PERIOD TABS — was 35 lines of animation code, now 1 component */}
+                    <PeriodTabs
+                        selected={period}
+                        onSelect={setPeriod}
+                    />
+
+                    {/* LINE CHART — already its own component */}
+                    <SpendingLineChart
+                        labels={chartData.labels}
+                        values={chartData.values}
+                    />
+                </View>
+
+                {/* TOP SPENDING — was 45 lines of map/render, now 1 component */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Top Spendings</Text>
+                    <TopSpendingList data={topSpending} />
                 </View>
             </ScrollView>
-
         </SafeAreaView>
-    )
+    );
 }
+
+// ── STYLES ───────────────────────────────────────────────
+// Only the screen-level layout styles remain here.
+// All component-specific styles live inside their own files.
 const createStyles = (colors: ReturnType<typeof useTheme>) =>
     StyleSheet.create({
         safeArea: {
             flex: 1,
             backgroundColor: colors.background,
         },
-        // HEADER
         header: {
-            paddingHorizontal: 16,
+            paddingHorizontal: 10,
             paddingTop: 16,
             paddingBottom: 12,
         },
@@ -224,41 +248,10 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             marginTop: 2,
         },
         scrollContent: {
-            paddingHorizontal: 16,
+            paddingHorizontal: 10,
             paddingBottom: 32,
             gap: 20,
         },
-        // SUMMARY ROW
-        summaryRow: {
-            flexDirection: 'row',
-            gap: 12,
-        },
-        summaryCard: {
-            flex: 1,
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            padding: 16,
-            gap: 10,
-            borderWidth: 1,
-            borderColor: colors.border,
-        },
-        summaryIconRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-        },
-        summaryLabel: {
-            fontSize: 13,
-            fontWeight: '600',
-            color: colors.textSecondary,
-            textTransform: 'uppercase',
-            letterSpacing: 0.5,
-        },
-        summaryAmount: {
-            fontSize: 20,
-            fontWeight: '700',
-        },
-        // SECTIONS
         section: {
             gap: 10,
         },
@@ -266,84 +259,5 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             fontSize: 16,
             fontWeight: '700',
             color: colors.textPrimary,
-        },
-        // PERIOD TABS (Week / Month / Year)
-        periodTabs: {
-            flexDirection: 'row',
-            backgroundColor: colors.surface,
-            borderRadius: 12,
-            padding: 4,
-            borderWidth: 1,
-            borderColor: colors.border,
-        },
-        periodTab: {
-            flex: 1,
-            paddingVertical: 10,
-            borderRadius: 10,
-            alignItems: 'center',
-        },
-        periodTabActive: {
-            backgroundColor: colors.champagne,
-        },
-        periodTabText: {
-            fontSize: 14,
-            fontWeight: '600',
-            color: colors.textSecondary,
-        },
-        periodTabTextActive: {
-            color: colors.background,
-        },
-        // BREAKDOWN LIST
-        breakdownCard: {
-            backgroundColor: colors.surface,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: colors.border,
-            overflow: 'hidden',
-        },
-        breakdownRow: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingVertical: 14,
-            paddingHorizontal: 16,
-        },
-        breakdownBorder: {
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-        },
-        breakdownLeft: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
-        },
-        colorDot: {
-            width: 12,
-            height: 12,
-            borderRadius: 6,
-        },
-        breakdownName: {
-            fontSize: 15,
-            fontWeight: '500',
-            color: colors.textPrimary,
-        },
-        breakdownRight: {
-            alignItems: 'flex-end',
-            gap: 2,
-        },
-        breakdownAmount: {
-            fontSize: 15,
-            fontWeight: '600',
-            color: colors.textPrimary,
-        },
-        breakdownPercent: {
-            fontSize: 12,
-            color: colors.textSecondary,
-        },
-        noDataText: {
-            padding: 24,
-            fontSize: 14,
-            color: colors.textSecondary,
-            textAlign: 'center',
         },
     });

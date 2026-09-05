@@ -13,7 +13,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Eye, EyeOff } from "lucide-react-native";
 import useTheme from "../../hooks/useTheme";
-import PrimaryButton from '../../components/common/PrimaryButton';
+import PrimaryButton from '../../components/common/buttons/PrimaryButton';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
 

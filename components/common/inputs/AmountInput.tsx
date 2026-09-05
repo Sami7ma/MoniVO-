@@ -21,7 +21,7 @@
 
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, Dimensions } from 'react-native';
-import useTheme from '../../hooks/useTheme';
+import useTheme from '../../../hooks/useTheme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

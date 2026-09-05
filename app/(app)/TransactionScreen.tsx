@@ -73,7 +73,6 @@ export default function TransactionScreen() {
             });
         }
 
-        // step 4 sort
         // newwest transacion first
         filtered.sort((a, b) =>
             new Date(b.date).getTime() - new Date(a.date).getTime()

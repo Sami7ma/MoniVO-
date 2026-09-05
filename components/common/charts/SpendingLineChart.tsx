@@ -67,7 +67,7 @@ export default function SpendingLineChart({ labels, values }: SpendingLineChartP
                         fontSize: 11,
                         fontWeight: '500',
                     },
-                    // DECORATIOn
+                    // DECORATION
                     propsForDots: {
                         r: '4',                               // dot radius
                         strokeWidth: '2',

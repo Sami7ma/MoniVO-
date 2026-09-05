@@ -13,8 +13,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
-import useTheme from '../../hooks/useTheme';
-import type { Category } from '../../types/Category';
+import useTheme from '../../../hooks/useTheme';
+import type { Category } from '../../../types/Category';
 
 interface CategoryPickerProps {
     categories: Category[];        // the list of categories to display

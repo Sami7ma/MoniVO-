@@ -1,5 +1,4 @@
 // components/common/PeriodSelector.tsx
-//
 // Date range selector with a built-in period wheel picker.
 //
 // HOW IT WORKS:
@@ -24,14 +23,14 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, } from 'react-native';
 import { Calendar as CalendarIcon } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
-import useTheme from '../../hooks/useTheme';
+import useTheme from '../../../hooks/useTheme';
 
-// ── TYPES ────────────────────────────────────────────────
+//  TYPES
 // These define what kind of period the user can pick
 type FixedPeriod = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 type BudgetPeriod = FixedPeriod | 'custom';
 
-// ── PRESET OPTIONS for the scroll wheel ──────────────────
+//PRESET OPTIONS for the scroll wheel
 const PERIOD_OPTIONS: { value: FixedPeriod; label: string }[] = [
     { value: 'daily', label: 'Daily' },
     { value: 'weekly', label: 'Weekly' },
@@ -39,7 +38,7 @@ const PERIOD_OPTIONS: { value: FixedPeriod; label: string }[] = [
     { value: 'monthly', label: 'Monthly' },
 ];
 
-// ── PROPS ────────────────────────────────────────────────
+//  PROPS 
 // The parent (AddBudgetModal) controls the dates and period.
 // This component just provides the UI for changing them.
 interface PeriodSelectorProps {
@@ -51,7 +50,7 @@ interface PeriodSelectorProps {
     onPeriodChange: (period: BudgetPeriod) => void;  // update period type
 }
 
-// ── HELPER: format YYYY-MM-DD → "Aug 24, 2026" ──────────
+//  HELPER: format YYYY-MM-DD → "Aug 24, 2026" 
 const formatDate = (date: string) =>
     new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
         month: 'short',
@@ -59,7 +58,7 @@ const formatDate = (date: string) =>
         year: 'numeric',
     });
 
-// ── HELPER: Date object → YYYY-MM-DD string ─────────────
+//  HELPER: Date object → YYYY-MM-DD string 
 const toDateString = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -67,7 +66,7 @@ const toDateString = (date: Date) => {
     return `${year}-${month}-${day}`;
 };
 
-// ── DATE RANGE CALCULATORS ───────────────────────────────
+//  DATE RANGE CALCULATORS 
 // Each returns { start, end } for the given period type
 
 const getDailyRange = () => {
@@ -111,7 +110,7 @@ const getRangeForPeriod = (p: FixedPeriod) => {
     return getMonthlyRange();
 };
 
-// ── HELPER: get all dates between start and end ──────────
+//  HELPER: get all dates between start and end 
 // Used to highlight the range on the calendar
 const getDatesBetween = (start: string, end: string) => {
     const dates: string[] = [];
@@ -209,7 +208,7 @@ export default function PeriodSelector({
     const [selectingDate, setSelectingDate] = useState<'start' | 'end'>('start');
     const [showCalendar, setShowCalendar] = useState(false);
 
-    // ── HANDLE PERIOD CHANGE ─────────────────────────────
+    //  HANDLE PERIOD CHANGE 
     const handlePeriodChange = (newPeriod: BudgetPeriod) => {
         onPeriodChange(newPeriod);
 
@@ -228,7 +227,7 @@ export default function PeriodSelector({
         setShowCalendar(false);
     };
 
-    // ── CALENDAR DATE SELECTION ──────────────────────────
+    //  CALENDAR DATE SELECTION 
     const handleDateSelect = (date: string) => {
         if (selectingDate === 'start') {
             onStartDateChange(date);
@@ -243,7 +242,7 @@ export default function PeriodSelector({
         setShowCalendar(false);
     };
 
-    // ── CALENDAR MARKINGS ────────────────────────────────
+    //  CALENDAR MARKINGS 
     // Build the marked dates object for react-native-calendars
     const rangeDates = getDatesBetween(startDate, endDate);
     const markedDates = rangeDates.reduce(
@@ -259,7 +258,7 @@ export default function PeriodSelector({
         {} as Record<string, any>
     );
 
-    // ── UI ───────────────────────────────────────────────
+    //  UI 
     return (
         <>
             {/* PERIOD PICKER — wheel + custom button */}
@@ -429,14 +428,14 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             letterSpacing: 0.5,
         },
 
-        // ── PERIOD ROW (wheel + custom button) ──────────
+        //  PERIOD ROW (wheel + custom button) 
         periodRow: {
             flexDirection: 'row',
             gap: 10,
             height: 126,
         },
 
-        // ── SCROLL WHEEL ────────────────────────────────
+        //  SCROLL WHEEL 
         wheelContainer: {
             flex: 1,
             height: 126,
@@ -474,7 +473,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             borderRadius: 10,
         },
 
-        // ── CUSTOM BUTTON ───────────────────────────────
+        //  CUSTOM BUTTON 
         customButton: {
             width: '28%',
             minWidth: 90,
@@ -499,7 +498,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             color: colors.background,
         },
 
-        // ── DATE SUMMARY ────────────────────────────────
+        //  DATE SUMMARY 
         dateSummary: {
             flexDirection: 'row',
             alignItems: 'center',
@@ -526,7 +525,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             color: colors.textPrimary,
         },
 
-        // ── RANGE SELECTOR (start / end tabs) ───────────
+        //  RANGE SELECTOR (start / end tabs) 
         rangeSelector: {
             flexDirection: 'row',
             alignItems: 'stretch',
@@ -576,7 +575,7 @@ const createStyles = (colors: ReturnType<typeof useTheme>) =>
             backgroundColor: colors.champagne,
         },
 
-        // ── CALENDAR ────────────────────────────────────
+        //  CALENDAR 
         calendarContainer: {
             backgroundColor: colors.surface,
             borderRadius: 16,

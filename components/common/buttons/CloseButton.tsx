@@ -18,7 +18,8 @@ import {
     StyleSheet,
 } from 'react-native';
 import { X } from 'lucide-react-native';
-import useTheme from '../../hooks/useTheme';
+import useTheme from '../../../hooks/useTheme';
+
 
 // Props — only needs an onPress handler
 interface CloseButtonProps {

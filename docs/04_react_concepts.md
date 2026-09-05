@@ -1,4 +1,4 @@
-# MoniVo — React Concepts Explained
+e# MoniVo — React Concepts Explained
 
 > A learning reference for the team. Each concept is explained with examples from the MoniVo codebase.
 

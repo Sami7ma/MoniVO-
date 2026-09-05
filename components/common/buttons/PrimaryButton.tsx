@@ -8,12 +8,7 @@
 // - OnboardingScreen  → "Next" / "Get Started"
 // - AddTransactionModal → "Add Income" / "Add Expense"
 // - AddBudgetModal    → "Create Budget"
-//
-// WHY A COMPONENT?
-// This button appears in 5+ files. If we ever want to change
-// the border radius, add a loading spinner, or tweak the font —
-// we change it ONCE here instead of hunting through 5 files.
-//
+// 
 // PROPS:
 // - label: the text displayed on the button
 // - onPress: function to call when tapped
@@ -22,7 +17,7 @@
 
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, } from 'react-native';
-import useTheme from '../../hooks/useTheme';
+import useTheme from '../../../hooks/useTheme';
 
 // Props interface — defines what the parent can pass to this component
 interface PrimaryButtonProps {
