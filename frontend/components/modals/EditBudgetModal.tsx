@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, Pressable, } from 'react-native';
 
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import { Budget } from '../../types/Budget';
 
 import CloseButton from '../common/buttons/CloseButton';
@@ -28,9 +28,9 @@ export default function EditBudgetModal({
     const colors = useTheme();
     const styles = createStyles(colors);
 
-    const categories = useMoniVoStore((state) => state.categories);
-    const budgets = useMoniVoStore((state) => state.budgets);
-    const updateBudget = useMoniVoStore((state) => state.updateBudget);
+    const categories = useBanKoniStore((state) => state.categories);
+    const budgets = useBanKoniStore((state) => state.budgets);
+    const updateBudget = useBanKoniStore((state) => state.updateBudget);
 
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [limitAmount, setLimitAmount] = useState('');

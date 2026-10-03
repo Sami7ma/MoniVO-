@@ -1,4 +1,4 @@
-// This is the global brain of MOvivo
+// This is the global brain of BanKoni
 // Any screen can connect here to read or update data
 // and when data changes all screeen update automtically
 
@@ -24,7 +24,7 @@ export const defaultMockUser: User = {
 };
 
 // 1 we define the sape of the store 
-interface MoniVoStore {
+interface BanKoniStore {
     // -State (the actual data)
     user: User | null; //the logged inuser
     isLoadingAuth: boolean; // To show loading screen while checking token
@@ -71,7 +71,7 @@ interface MoniVoStore {
 }
 
 // 2. create the store
-const useMoniVoStore = create<MoniVoStore>((set, get) => ({
+const useBanKoniStore = create<BanKoniStore>((set, get) => ({
     user: null,
     isLoadingAuth: true,
     transactions: dummyTransactions, // Initialized with dummy data so the app works immediately
@@ -392,4 +392,4 @@ const useMoniVoStore = create<MoniVoStore>((set, get) => ({
     })),
 }));
 
-export default useMoniVoStore;
+export default useBanKoniStore;

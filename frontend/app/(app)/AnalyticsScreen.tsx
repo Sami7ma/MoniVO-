@@ -22,7 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
 import useTheme from "../../hooks/useTheme";
-import useMoniVoStore from "../../store/useMoniVoStore";
+import useBanKoniStore from "../../store/useBanKoniStore";
 
 // ── COMPONENTS ───────────────────────────────────────────
 // Each one handles its own UI + styles.
@@ -63,11 +63,11 @@ export default function AnalyticsScreen() {
     const [period, setPeriod] = useState<Period>('Month');
 
     // ── ZUSTAND ──────────────────────────────────────────
-    const transactions = useMoniVoStore((state) => state.transactions);
-    const categories = useMoniVoStore((state) => state.categories);
-    const totalIncome = useMoniVoStore((state) => state.totalIncome);
-    const totalExpenses = useMoniVoStore((state) => state.totalExpenses);
-    const budgets = useMoniVoStore((state) => state.budgets);
+    const transactions = useBanKoniStore((state) => state.transactions);
+    const categories = useBanKoniStore((state) => state.categories);
+    const totalIncome = useBanKoniStore((state) => state.totalIncome);
+    const totalExpenses = useBanKoniStore((state) => state.totalExpenses);
+    const budgets = useBanKoniStore((state) => state.budgets);
 
     // ── HELPER ───────────────────────────────────────────
     const getCategoryName = (id: string) =>

@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { CalendarDays, Filter, Search, X, Plus } from 'lucide-react-native';
 import { Calendar } from 'react-native-calendars';
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import TransactionRow from '../../components/home/TransactionRow';
 import { FlatList } from 'react-native';
 import AddTransactionModal from '../../components/modals/AddTransactionModal';
@@ -22,9 +22,9 @@ export default function TransactionScreen() {
     const styles = createStyles(colors);
 
     // Zustand
-    const transactions = useMoniVoStore((state) => state.transactions);
-    const categories = useMoniVoStore((state) => state.categories);
-    const deleteTransaction = useMoniVoStore((state) => state.deleteTransaction);
+    const transactions = useBanKoniStore((state) => state.transactions);
+    const categories = useBanKoniStore((state) => state.categories);
+    const deleteTransaction = useBanKoniStore((state) => state.deleteTransaction);
     const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
     const handleDelete = (tx: Transaction) => {

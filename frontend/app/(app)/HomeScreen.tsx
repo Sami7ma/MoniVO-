@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Sun, Moon } from 'lucide-react-native';
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import { useRef, useState } from 'react';
 import BalanceCards, { BalanceCardsRef } from '../../components/home/BalanceCards';
 import AddTransactionModal from '../../components/modals/AddTransactionModal';
@@ -18,12 +18,12 @@ import LogoutButton from '../../components/common/buttons/LogoutButton';
 
 
 export default function HomeScreen() {
-    const user = useMoniVoStore((state) => state.user);
-    const totalBalance = useMoniVoStore((state) => state.totalBalance);
-    const totalIncome = useMoniVoStore((state) => state.totalIncome);
-    const totalExpenses = useMoniVoStore((state) => state.totalExpenses);
-    const toggleTheme = useMoniVoStore((state) => state.toggleTheme);
-    const theme = useMoniVoStore((state) => state.theme);
+    const user = useBanKoniStore((state) => state.user);
+    const totalBalance = useBanKoniStore((state) => state.totalBalance);
+    const totalIncome = useBanKoniStore((state) => state.totalIncome);
+    const totalExpenses = useBanKoniStore((state) => state.totalExpenses);
+    const toggleTheme = useBanKoniStore((state) => state.toggleTheme);
+    const theme = useBanKoniStore((state) => state.theme);
     const cardsRef = useRef<BalanceCardsRef>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [modalType, setModalType] = useState<'CREDIT' | 'DEBIT'>('DEBIT');

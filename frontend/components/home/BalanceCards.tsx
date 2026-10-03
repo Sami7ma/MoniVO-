@@ -11,7 +11,7 @@ import { View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Nfc } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 20;
@@ -38,7 +38,7 @@ const formatMoney = (amount: number) =>
 const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
     ({ userName, totalBalance, totalIncome, totalExpenses }, ref) => {
         const colors = useTheme();
-        const theme = useMoniVoStore((state) => state.theme);
+        const theme = useBanKoniStore((state) => state.theme);
 
         // No-op scroll methods — kept so HomeScreen ref calls still work
         useImperativeHandle(ref, () => ({
@@ -85,7 +85,7 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
 
                     {/* TOP: Logo + NFC */}
                     <View style={styles.topRow}>
-                        <Text style={[styles.logo, { color: colors.textPrimary }]}>MoniVo</Text>
+                        <Text style={[styles.logo, { color: colors.textPrimary }]}>BanKoni</Text>
                         <Nfc size={20} color={colors.champagne} />
                     </View>
 
@@ -150,7 +150,7 @@ const BalanceCards = forwardRef<BalanceCardsRef, BalanceCardsProps>(
                         <Text style={[styles.cardHolder, { color: colors.textPrimary }]}>
                             {userName.toUpperCase()}
                         </Text>
-                        <Text style={[styles.cardBrand, { color: colors.champagne }]}>MONIVO</Text>
+                        <Text style={[styles.cardBrand, { color: colors.champagne }]}>BANKONI</Text>
                     </View>
                 </LinearGradient>
             </View>

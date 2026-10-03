@@ -10,7 +10,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Home, ArrowLeftRight, PiggyBank, BarChart } from "lucide-react-native";
 import { SafeAreaProvider, useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import useTheme from "../../hooks/useTheme";
-import useMoniVoStore from "../../store/useMoniVoStore";
+import useBanKoniStore from "../../store/useBanKoniStore";
 
 // Import all screens
 import OnboardingScreen from "../(auth)/OnboardinScree"; // ← keep your typo filename
@@ -127,11 +127,11 @@ function AppTabNavigator() {
 // ROOT NAVIGATOR — The main export, decides Auth vs App
 export default function AppNavigator() {
   // Read the user from Zustand — if null = not logged in
-  const user = useMoniVoStore((state) => state.user);
+  const user = useBanKoniStore((state) => state.user);
   // Read loading state — true while checking for existing token
-  const isLoadingAuth = useMoniVoStore((state) => state.isLoadingAuth);
+  const isLoadingAuth = useBanKoniStore((state) => state.isLoadingAuth);
   // Get the checkAuth function to verify token on app start
-  const checkAuth = useMoniVoStore((state) => state.checkAuth);
+  const checkAuth = useBanKoniStore((state) => state.checkAuth);
   // Get theme colors for loading screen
   const colors = useTheme();
 
@@ -144,10 +144,10 @@ export default function AppNavigator() {
     const init = async () => {
       await checkAuth();
       // After auth check, if user exists, fetch their data from backend
-      const user = useMoniVoStore.getState().user;
+      const user = useBanKoniStore.getState().user;
       if (user) {
-        await useMoniVoStore.getState().fetchTransactions();
-        await useMoniVoStore.getState().fetchBudgets();
+        await useBanKoniStore.getState().fetchTransactions();
+        await useBanKoniStore.getState().fetchBudgets();
       }
     };
     init();

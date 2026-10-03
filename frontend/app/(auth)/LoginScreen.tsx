@@ -15,7 +15,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Eye, EyeOff } from "lucide-react-native";
 import useTheme from "../../hooks/useTheme";
-import useMoniVoStore from "../../store/useMoniVoStore";
+import useBanKoniStore from "../../store/useBanKoniStore";
 import PrimaryButton from "../../components/common/buttons/PrimaryButton";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { AuthStackParamList } from "../navigation/AppNavigator";
@@ -37,7 +37,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false); // for show/ hide password
   const [loading, setLoading] = useState(false); // Track loading state
   // Get the login function from store
-  const login = useMoniVoStore((state) => state.login);
+  const login = useBanKoniStore((state) => state.login);
 
   // Handlers
   const handleLogin = async () => {

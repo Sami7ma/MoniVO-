@@ -7,7 +7,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Pencil, Trash2 } from 'lucide-react-native';
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import EditBudgetModal from '../modals/EditBudgetModal';
 import { Budget } from '../../types/Budget';
 
@@ -16,10 +16,10 @@ export default function HomeBudgetPreview() {
     const styles = createStyles(colors);
     const navigation = useNavigation();
 
-    const budgets = useMoniVoStore((state) => state.budgets);
-    const transactions = useMoniVoStore((state) => state.transactions);
-    const categories = useMoniVoStore((state) => state.categories);
-    const deleteBudget = useMoniVoStore((state) => state.deleteBudget);
+    const budgets = useBanKoniStore((state) => state.budgets);
+    const transactions = useBanKoniStore((state) => state.transactions);
+    const categories = useBanKoniStore((state) => state.categories);
+    const deleteBudget = useBanKoniStore((state) => state.deleteBudget);
 
     const [expandedBudgetId, setExpandedBudgetId] = useState<string | null>(null);
     const [editingBudget, setEditingBudget] = useState<Budget | null>(null);

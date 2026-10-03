@@ -26,7 +26,7 @@ import {
 
 // hooks
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 
 // ── REUSABLE COMPONENTS ──────────────────────────────────
 import CloseButton from '../common/buttons/CloseButton';
@@ -52,9 +52,9 @@ export default function AddBudgetModal({
     const styles = createStyles(colors);
 
     // ZUSTAND
-    const categories = useMoniVoStore((state) => state.categories);
-    const budgets = useMoniVoStore((state) => state.budgets);
-    const addBudget = useMoniVoStore((state) => state.addBudget);
+    const categories = useBanKoniStore((state) => state.categories);
+    const budgets = useBanKoniStore((state) => state.budgets);
+    const addBudget = useBanKoniStore((state) => state.addBudget);
 
     // LOCAL STATE — only the form fields remain here.
     // Date/period state is now managed inside PeriodSelector.

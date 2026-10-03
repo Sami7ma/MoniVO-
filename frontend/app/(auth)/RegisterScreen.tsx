@@ -1,4 +1,4 @@
-// THe signup form new users create theri MoniVo account
+// THe signup form new users create theri BanKoni account
 import React, { useState } from "react";
 import {
   View,
@@ -17,7 +17,7 @@ import useTheme from "../../hooks/useTheme";
 import PrimaryButton from "../../components/common/buttons/PrimaryButton";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { AuthStackParamList } from "../navigation/AppNavigator";
-import useMoniVoStore from "../../store/useMoniVoStore"; // NEW: Import store
+import useBanKoniStore from "../../store/useBanKoniStore"; // NEW: Import store
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, "Register">;
@@ -35,7 +35,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false); // NEW: Track loading state
   // Get the real register function from store
-  const register = useMoniVoStore((state) => state.register);
+  const register = useBanKoniStore((state) => state.register);
 
   // Handlers
   const handleRegister = async () => {
@@ -54,8 +54,8 @@ export default function RegisterScreen({ navigation }: Props) {
       console.log("📡 2. Sending request to backend...");
       await register(name, email, password);
       // Fetch the user's data (will be empty for new users, but sets up the connection)
-      await useMoniVoStore.getState().fetchTransactions();
-      await useMoniVoStore.getState().fetchBudgets();
+      await useBanKoniStore.getState().fetchTransactions();
+      await useBanKoniStore.getState().fetchBudgets();
       console.log("✅ 3. Registration successful!");
 
     } catch (error: any) {

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, KeyboardAvoidingView, Platform, Pressable, } from 'react-native';
 
 import { Transaction } from '../../types/Transaction';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import useTheme from '../../hooks/useTheme';
 
 import CloseButton from '../common/buttons/CloseButton';
@@ -26,8 +26,8 @@ export default function EditTransactionModal({
     const colors = useTheme();
     const styles = createStyles(colors);
 
-    const categories = useMoniVoStore((state) => state.categories);
-    const updateTransaction = useMoniVoStore((state) => state.updateTransaction);
+    const categories = useBanKoniStore((state) => state.categories);
+    const updateTransaction = useBanKoniStore((state) => state.updateTransaction);
 
     const [type, setType] = useState<'CREDIT' | 'DEBIT'>('DEBIT');
     const [amount, setAmount] = useState('');

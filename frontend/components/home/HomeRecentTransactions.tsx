@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import TransactionRow from './TransactionRow';
 import EditTransactionModal from '../modals/EditTransactionModal';
 import { Transaction } from '../../types/Transaction';
@@ -16,9 +16,9 @@ export default function HomeRecentTransactions() {
     const colors = useTheme();
     const styles = createStyles(colors);
     const navigation = useNavigation();
-    const transactions = useMoniVoStore((state) => state.transactions);
-    const categories = useMoniVoStore((state) => state.categories);
-    const deleteTransaction = useMoniVoStore((state) => state.deleteTransaction);
+    const transactions = useBanKoniStore((state) => state.transactions);
+    const categories = useBanKoniStore((state) => state.categories);
+    const deleteTransaction = useBanKoniStore((state) => state.deleteTransaction);
     const [editingTx, setEditingTx] = useState<Transaction | null>(null);
     const recentTransactions = transactions.slice(0, 7);
     const getCategoryById = (id: string) =>

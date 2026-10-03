@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useTheme from '../../hooks/useTheme';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import SpendingLineChart from '../common/charts/SpendingLineChart';
 
 const MONTH_NAMES = [
@@ -20,7 +20,7 @@ export default function HomeSpendingChart() {
     const styles = createStyles(colors);
     const navigation = useNavigation();
 
-    const transactions = useMoniVoStore((state) => state.transactions);
+    const transactions = useBanKoniStore((state) => state.transactions);
 
     // This month: 4 weekly buckets
     const chartData = useMemo(() => {

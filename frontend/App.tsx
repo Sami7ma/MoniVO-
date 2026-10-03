@@ -20,9 +20,9 @@ export default function App() {
 //   <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
 //     {/* we uses status bar makes the clock/battery bar at the to mathc our theme */}
 //     <StatusBar style='light' />
-//     {/* the MoniVo logo text - temporary palceholdr */}
+//     {/* the BanKoni logo text - temporary palceholdr */}
 //     <Text style={{ color: Colors.champagne, fontSize: 36, fontWeight: 'bold', letterSpacing: 2 }} >
-//       MoniVo!
+//       BanKoni!
 //     </Text>
 //     <Text style={{ color: Colors.muted, fontSize: 8, fontWeight: 'light', letterSpacing: 2 }} >
 //       Your money, Clearly!

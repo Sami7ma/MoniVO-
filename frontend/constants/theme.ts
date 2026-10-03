@@ -1,4 +1,4 @@
-// the centralize theme system for MONIVO
+// the centralize theme system for BANKONI
 // every svreeen reads form the via the useTheme() hook.
 // changging the theme in zustand automaticlayu updates every screen
 

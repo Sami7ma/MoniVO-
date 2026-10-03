@@ -3,12 +3,12 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import useTheme from '../../../hooks/useTheme';
-import useMoniVoStore from '../../../store/useMoniVoStore';
+import useBanKoniStore from '../../../store/useBanKoniStore';
 
 export default function LogoutButton() {
     const colors = useTheme();
     const styles = createStyles(colors);
-    const logOut = useMoniVoStore((state) => state.logOut);
+    const logOut = useBanKoniStore((state) => state.logOut);
 
     const handlePress = () => {
         Alert.alert(

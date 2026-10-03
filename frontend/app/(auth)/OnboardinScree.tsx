@@ -1,4 +1,4 @@
-// the first screen users see when tehy open Monivo for the first time.
+// the first screen users see when tehy open BanKoni for the first time.
 // 3 sliding horizontal swiper that introduces the app.
 
 import React, { useRef, useState } from 'react';
@@ -28,7 +28,7 @@ const slides = [
         id: 1,
         icon: WalletCards,
         title: 'Your Money.\n Clearly.',
-        subtitle: 'MoniVO helps you see exaclty where your money goes, every single day.',
+        subtitle: 'BanKoni helps you see exaclty where your money goes, every single day.',
     },
     {
         id: 2,

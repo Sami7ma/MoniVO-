@@ -8,7 +8,7 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // Custom MoniVo color palette
+      // Custom BanKoni color palette
       colors: {
         background: '#080D18',   // Deep navy — the main app background
         surface: '#121A28',      // Slightly lighter navy — for cards and sections

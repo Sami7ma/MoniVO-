@@ -1,6 +1,6 @@
 // components/modals/AddTransactionModal.tsx
 //
-// MoniVo — Add Income / Add Expense modal
+// BanKoni — Add Income / Add Expense modal
 //
 // NOW USES REUSABLE COMPONENTS:
 // - CloseButton     → modal header X button
@@ -27,7 +27,7 @@ import {
 } from 'react-native';
 
 import { Transaction } from '../../types/Transaction';
-import useMoniVoStore from '../../store/useMoniVoStore';
+import useBanKoniStore from '../../store/useBanKoniStore';
 import useTheme from '../../hooks/useTheme';
 
 // ── REUSABLE COMPONENTS ──────────────────────────────────
@@ -54,9 +54,9 @@ export default function AddTransactionModal({ visible, onClose, defaultType, }: 
     const styles = createStyles(colors);
 
     // ZUSTAND
-    const categories = useMoniVoStore((state) => state.categories);
-    const addTransaction = useMoniVoStore((state) => state.addTransaction);
-    const wallets = useMoniVoStore((state) => state.wallets);
+    const categories = useBanKoniStore((state) => state.categories);
+    const addTransaction = useBanKoniStore((state) => state.addTransaction);
+    const wallets = useBanKoniStore((state) => state.wallets);
 
     // FORM STATE
     const [type, setType] = useState<'CREDIT' | 'DEBIT'>(defaultType);
