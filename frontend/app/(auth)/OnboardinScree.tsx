@@ -1,12 +1,10 @@
 // the first screen users see when tehy open BanKoni for the first time.
 // 3 sliding horizontal swiper that introduces the app.
 
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../navigation/AppNavigator';
-import {
-    View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, ViewToken, // Ts type for the visible item tracking
-} from 'react-native';
+import { View, Text, FlatList, StyleSheet, Dimensions, TouchableOpacity, ViewToken, } from 'react-native';
 import {
     WalletCards,
     ChartNoAxesCombined,

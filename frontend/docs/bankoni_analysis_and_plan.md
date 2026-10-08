@@ -9,7 +9,7 @@
 | Area | Status | Files |
 |------|--------|-------|
 | **Auth Screens** | ✅ Complete | `LoginScreen.tsx`, `RegisterScreen.tsx`, `OnboardingScreen.tsx` |
-| **Home Dashboard** | ✅ Complete | `HomeScreen.tsx` + Balance Cards, Spending Chart, Budget Preview, Recent Transactions |
+| **Home Dashboard** | ✅ Complete | `HomeScreen.tsx` + Balance Cards, Spending Chart, Budget Preview, Recent Transactions | 
 | **Transactions** | ✅ Complete | Full CRUD — Add/Edit/Delete with modals, filtering, search |
 | **Budgets** | ✅ Complete | Full CRUD — Add/Edit/Delete with category linking, progress bars |
 | **Analytics** | ✅ Complete | Charts, category breakdowns, spending trends |
@@ -261,3 +261,33 @@ Phase 1 (Rebrand)  →  Phase 2 (SQLite)  →  Phase 3 (SMS)  →  Phase 4 (Auto
 - ✅ **No backend needed** → Everything runs on the phone
 
 The frontend is already ~80% built. We're replacing the "backend" concept with an on-device database and adding intelligence on top.
+
+
+                               ┌────────────────────────────────────────────────┐
+                               │           📱 BanKoni Mobile App                │
+                               │                                                │
+   [ Cardholder Name ]         │   ┌────────────────────────────────────────┐   │
+   [ @Nickname       ] ───────>│   │  Auth Layer: 4-Digit PIN + Biometrics  │   │
+   [ 4-Digit PIN     ]         │   └───────────────────┬────────────────────┘   │
+   [ Biometrics      ]         │                       │                        │
+                               │                       ▼                        │
+                               │   ┌────────────────────────────────────────┐   │
+                               │   │   Zustand Store (useBanKoniStore.ts)   │   │
+                               │   │       Fast in-memory UI cache          │   │
+                               │   └───────────────────┬────────────────────┘   │
+                               │                       │                        │
+                               │                       ▼                        │
+                               │   ┌────────────────────────────────────────┐   │
+                               │   │    SQLite Engine (bankoni.db)          │   │
+                               │   │   PRAGMA journal_mode = WAL            │   │
+                               │   │   Tables: users, tx, budgets, wallets  │   │
+                               │   └───────────────────┬────────────────────┘   │
+                               │                       │                        │
+                               └───────────────────────┼────────────────────────┘
+                                                       │
+                                                       ▼
+                                         ┌───────────────────────────┐
+                                         │  Export to JSON File      │
+                                         │  (expo-file-system / share│
+                                         │  Ready for Telegram Bot)  │
+                                         └───────────────────────────┘

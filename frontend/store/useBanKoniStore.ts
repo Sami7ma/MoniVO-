@@ -1,376 +1,438 @@
-// This is the global brain of BanKoni
-// Any screen can connect here to read or update data
-// and when data changes all screeen update automtically
+// frontend/store/useBanKoniStore.ts
+// The central brain of BanKoni — 100% Local-First with SQLite, PIN & Biometrics
 
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
-import api from '../utils/api';
-
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { hashPin, verifyPin, isHashedPin, } from '../security/pinSecurity';
 import type { Transaction } from '../types/Transaction';
 import type { Category } from '../types/Category';
 import type { Budget } from '../types/Budget';
 import type { Wallet } from '../types/Wallet';
-import type { User } from '../types/User';
+import type { User, ExportDataPayload } from '../types/User';
+import {
+    initDatabase,
+    getActiveUserDB,
+    saveUserDB,
+    setBiometricEnabledDB,
+    getTransactionsDB,
+    insertTransactionDB,
+    updateTransactionDB,
+    deleteTransactionDB,
+    getBudgetsDB,
+    insertBudgetDB,
+    updateBudgetDB,
+    deleteBudgetDB,
+    getCategoriesDB,
+    insertCategoryDB,
+    deleteCategoryDB,
+    getWalletsDB,
+    insertWalletDB,
+    deleteWalletDB,
+    exportDatabaseToJSON,
+    updateUserPinHashDB
+} from '../db/database';
 
-import { defaultCategories } from '../constants/defaultCategories';
-import { defaultWallet, dummyTransactions, dummyBudgets } from '../utils/dummyData';
-import { ThemeColors } from '../constants/theme';
-
-export const defaultMockUser: User = {
-    id: 'user-someone-1',
-    name: 'Someone',
-    email: 'Someone@gmail.com',
-    createdAt: '2026-01-01T00:00:00.000Z',
-};
-
-// 1 we define the sape of the store 
 interface BanKoniStore {
-    // -State (the actual data)
-    user: User | null; //the logged inuser
-    isLoadingAuth: boolean; // To show loading screen while checking token
-    transactions: Transaction[]; // every ecen and income entry
-    categories: Category[]; // user definable categories built in + user cretaed
-    budgets: Budget[]; //spending limits for each category
-    wallets: Wallet[];    // all wallets (cash, bank, telebirr)
-    isLoadingData: boolean; // NEW: loading flag for fetching transactions/budgets
+    // State
+    user: User | null;
+    registeredUser: User | null;
+    isBiometricSupported: boolean;
+    isLoadingAuth: boolean;
+    isLoadingData: boolean;
+    transactions: Transaction[];
+    categories: Category[];
+    budgets: Budget[];
+    wallets: Wallet[];
+    theme: 'light' | 'dark';
 
-    // Action (function that change data)
+    // Auth & Security
     checkAuth: () => Promise<void>;
-    login: (email: string, password: string) => Promise<void>;
-    register: (name: string, email: string, password: string) => Promise<void>;
+    registerWithPin: (
+        name: string,
+        pin: string,
+        enableBiometrics?: boolean
+    ) => Promise<void>;
+    loginWithPin: (pin: string) => Promise<boolean>;
+    loginWithBiometrics: () => Promise<boolean>;
+    enableBiometrics: (enabled: boolean) => Promise<void>;
+    logOut: () => Promise<void>;
     setUser: (user: User | null) => void;
 
-    // NEW: Fetch from backend
+    // Backwards-compatible aliases
+    login: (pincode: string) => Promise<void>;
+    register: (name: string, pincode: string) => Promise<void>;
+
+    // Data Loading
+    loadAllData: () => Promise<void>;
     fetchTransactions: () => Promise<void>;
     fetchBudgets: () => Promise<void>;
+    fetchCategories: () => Promise<void>;
+    fetchWallets: () => Promise<void>;
 
-    // CRUD — now talk to the backend
-    addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => Promise<void>;
+    // Transaction CRUD
+    addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'> | Transaction) => Promise<void>;
+    updateTransaction: (
+        id: string,
+        updated: Partial<Omit<Transaction, 'id' | 'createdAt'>>
+    ) => Promise<void>;
     deleteTransaction: (id: string) => Promise<void>;
-    updateTransaction: (id: string, updated: Partial<Omit<Transaction, 'id' | 'createdAt'>>) => Promise<void>;
 
-    addBudget: (budget: Omit<Budget, 'id'>) => Promise<void>;
-    deleteBudget: (id: string) => Promise<void>;
+    // Budgets CRUD
+    addBudget: (budget: Omit<Budget, 'id'> | Budget) => Promise<void>;
     updateBudget: (id: string, updated: Partial<Omit<Budget, 'id'>>) => Promise<void>;
+    deleteBudget: (id: string) => Promise<void>;
 
-    addCategory: (cat: Omit<Category, 'id'>) => void;
-    deleteCategory: (id: string) => void;
-    addWallet: (wallet: Omit<Wallet, 'id'>) => void;
-    deleteWallet: (id: string) => void;
-    logOut: () => Promise<void>;
+    // Categories & Wallets CRUD
+    addCategory: (cat: Omit<Category, 'id'>) => Promise<void>;
+    deleteCategory: (id: string) => Promise<void>;
+    addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'>) => Promise<void>;
+    deleteWallet: (id: string) => Promise<void>;
 
-    // Getters (computed values => from the states above)
-    totalBalance: () => number;
+    // Telegram Bot / Data Export Pipeline
+    exportDataToJSONFile: () => Promise<string | null>;
+    getExportPayload: () => Promise<ExportDataPayload>;
+
+    // Computed Getters
     totalIncome: () => number;
     totalExpenses: () => number;
+    totalBalance: () => number;
     transactionByCategory: () => Record<string, number>;
 
-    //  theme store
-    theme: 'light' | 'dark';
+    // Themes
     toggleTheme: () => void;
 }
 
-// 2. create the store
 const useBanKoniStore = create<BanKoniStore>((set, get) => ({
     user: null,
+    registeredUser: null,
+    isBiometricSupported: false,
     isLoadingAuth: true,
-    transactions: dummyTransactions, // Initialized with dummy data so the app works immediately
-    categories: defaultCategories,
-    budgets: dummyBudgets,          // Initialized with dummy data
-    wallets: [defaultWallet],
     isLoadingData: false,
+    transactions: [],
+    categories: [],
+    budgets: [],
+    wallets: [],
     theme: 'light',
 
-    // Authentication 
+    // ── Authentication & Security Lifecycle ──
     checkAuth: async () => {
         set({ isLoadingAuth: true });
         try {
-            const token = await SecureStore.getItemAsync('userToken');
-            const storedUser = await SecureStore.getItemAsync('userProfile');
-            if (token) {
-                try {
-                    const { data } = await api.get('/auth/me');
-                    const userObj: User = {
-                        ...data,
-                        id: data.id || data._id || 'user-someone-1',
-                    };
-                    set({ user: userObj, isLoadingAuth: false });
-                } catch {
-                    // Backend offline — restore local/mock user
-                    const userObj: User = storedUser ? JSON.parse(storedUser) : defaultMockUser;
-                    set({ 
-                        user: userObj, 
-                        isLoadingAuth: false,
-                        transactions: get().transactions.length > 0 ? get().transactions : dummyTransactions,
-                        budgets: get().budgets.length > 0 ? get().budgets : dummyBudgets,
+            await initDatabase();
+
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+            const canUseBiometrics = hasHardware && isEnrolled;
+            set({ isBiometricSupported: canUseBiometrics });
+
+            const active = await getActiveUserDB();
+            if (active) {
+                set({ registeredUser: active.user });
+
+                // If biometric is enabled by user and hardware is ready, prompt unlock
+                if (active.user.isBiometricEnabled && canUseBiometrics) {
+                    const bioRes = await LocalAuthentication.authenticateAsync({
+                        promptMessage: `Unlock BanKoni for ${active.user.name}`,
+                        fallbackLabel: 'Use PIN',
+                        disableDeviceFallback: true,
                     });
+
+                    if (bioRes.success) {
+                        set({ user: active.user });
+                        await get().loadAllData();
+                    } else {
+                        // Keep locked on PIN screen
+                        set({ user: null });
+                    }
+                } else {
+                    // Locked on PIN screen, profile cached
+                    set({ user: null });
                 }
             } else {
-                set({ isLoadingAuth: false });
+                set({ registeredUser: null, user: null });
             }
         } catch (error) {
+            console.error('Error during BanKoni checkAuth:', error);
+            set({ user: null, registeredUser: null });
+        } finally {
             set({ isLoadingAuth: false });
         }
     },
 
-    login: async (email: string, password: string) => {
-        const isSomeone = (email.trim().toLowerCase() === 'someone@gmail.com' && password === 'someone1');
+    registerWithPin: async (name: string, pin: string, enableBiometrics?: boolean) => {
+        const cleanName = name.trim();
+        const cleanPin = pin.trim();
+        if (!/^\d{4,}$/.test(cleanPin)) {
+            throw new Error('PIN must be at least 4 digits');
+        }
+        const pinHash = await hashPin(cleanPin);
+        const newUser: User = {
+            id: `usr_${Date.now()}`,
+            name: cleanName,
+
+            isBiometricEnabled: Boolean(enableBiometrics),
+            createdAt: new Date().toISOString(),
+        };
+        // Save to SQLite
+        await saveUserDB(newUser, pinHash);
+
+
+        set({ user: newUser, registeredUser: newUser });
+        await get().loadAllData();
+    },
+
+    loginWithPin: async (pin: string): Promise<boolean> => {
+        const cleanPin = pin.trim();
+        const active = await getActiveUserDB();
+        if (!active) return false;
+        const valid = await verifyPin(cleanPin, active.pinHash);
+        if (!valid) return false;
+        if (!isHashedPin(active.pinHash)) {
+            const upgradedHash = await hashPin(cleanPin);
+            await updateUserPinHashDB(active.user.id, upgradedHash);
+        }
+        set({ user: active.user, registeredUser: active.user });
+        await get().loadAllData();
+        return true;
+    },
+
+    loginWithBiometrics: async (): Promise<boolean> => {
         try {
-            const { data } = await api.post('/auth/login', { email, password });
-            await SecureStore.setItemAsync('userToken', data.token || 'mock-token');
-            const userObj: User = {
-                ...(data.user || data),
-                id: (data.user || data).id || (data.user || data)._id || 'user-someone-1',
-            };
-            await SecureStore.setItemAsync('userProfile', JSON.stringify(userObj));
-            set({ user: userObj });
-            get().fetchTransactions();
-            get().fetchBudgets();
-        } catch (error) {
-            console.warn('Backend unavailable or login failed, using local/mock user mode:', error);
-            // Local fallback — works completely offline without backend!
-            const userObj: User = isSomeone
-                ? defaultMockUser
-                : {
-                    id: `user-${Date.now()}`,
-                    name: email.split('@')[0] || 'Someone',
-                    email: email.trim(),
-                    createdAt: new Date().toISOString(),
-                };
-            await SecureStore.setItemAsync('userToken', 'mock-token');
-            await SecureStore.setItemAsync('userProfile', JSON.stringify(userObj));
-            set({
-                user: userObj,
-                transactions: get().transactions.length > 0 ? get().transactions : dummyTransactions,
-                budgets: get().budgets.length > 0 ? get().budgets : dummyBudgets,
+            const active = await getActiveUserDB();
+            if (!active?.user.isBiometricEnabled) return false;
+
+            const bioRes = await LocalAuthentication.authenticateAsync({
+                promptMessage: `Unlock BanKoni for ${active.user.name}`,
+                fallbackLabel: 'Enter PIN',
+                disableDeviceFallback: true,
             });
+
+            if (bioRes.success) {
+                set({ user: active.user, registeredUser: active.user });
+                await get().loadAllData();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.warn('Biometric authentication failed:', error);
+            return false;
         }
     },
 
-    register: async (name: string, email: string, password: string) => {
-        try {
-            const { data } = await api.post('/auth/register', { name, email, password });
-            await SecureStore.setItemAsync('userToken', data.token || 'mock-token');
-            const userObj: User = {
-                ...(data.user || data),
-                id: (data.user || data).id || (data.user || data)._id || `user-${Date.now()}`,
-            };
-            await SecureStore.setItemAsync('userProfile', JSON.stringify(userObj));
-            set({ user: userObj });
-            get().fetchTransactions();
-            get().fetchBudgets();
-        } catch (error) {
-            console.warn('Backend unavailable, creating user locally:', error);
-            const userObj: User = {
-                id: `user-${Date.now()}`,
-                name: name.trim() || 'Someone',
-                email: email.trim(),
-                createdAt: new Date().toISOString(),
-            };
-            await SecureStore.setItemAsync('userToken', 'mock-token');
-            await SecureStore.setItemAsync('userProfile', JSON.stringify(userObj));
-            set({
-                user: userObj,
-                transactions: get().transactions.length > 0 ? get().transactions : dummyTransactions,
-                budgets: get().budgets.length > 0 ? get().budgets : dummyBudgets,
+    enableBiometrics: async (enabled: boolean) => {
+        const user = get().user;
+        if ((!user)) return;
+        if (enabled) {
+            const supported = await LocalAuthentication.hasHardwareAsync();
+            const enrolled = await LocalAuthentication.isEnrolledAsync();
+            if (!supported || !enrolled) {
+                throw new Error('Biometrics are not available');
+            }
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Confirm Biometeric unlock',
+                disableDeviceFallback: true,
             });
+            if (!result.success) {
+                throw new Error('Biometeric Verification failed');
+            }
         }
+        await setBiometricEnabledDB(user.id, enabled);
+        set({
+            user: {
+                ...user,
+                isBiometricEnabled: enabled,
+            },
+        });
+
     },
 
     logOut: async () => {
-        try {
-            await SecureStore.deleteItemAsync('userToken');
-            await SecureStore.deleteItemAsync('userProfile');
-        } catch (e) {
-            // ignore
-        }
-        set({
-            user: null,
-            transactions: dummyTransactions,
-            budgets: dummyBudgets,
-        });
+        // Locks the app: user profile stays in SQLite, active session locks to PIN screen
+        set({ user: null });
     },
 
     setUser: (user) => set({ user }),
 
-    //  Fetch from Backend (with local fallback)
-    fetchTransactions: async () => {
+    // Backwards-compatible adapters for older callers
+    login: async (emailOrPin: string, pincode?: string) => {
+        const pinToTry = (pincode && pincode.length === 4) ? pincode : emailOrPin;
+        await get().loginWithPin(pinToTry);
+    },
+
+    register: async (name, pincode) => {
+        if (!pincode) {
+            throw new Error('A PIN is required to register.');
+        }
+        await get().registerWithPin(name, pincode,);
+    },
+
+    // ── Data Loading ──
+    loadAllData: async () => {
         set({ isLoadingData: true });
         try {
-            const { data } = await api.get('/transactions');
-            const normalized: Transaction[] = Array.isArray(data)
-                ? data.map((t: any) => ({
-                    ...t,
-                    id: t.id || t._id,
-                }))
-                : [];
-            set({ 
-                transactions: normalized.length > 0 ? normalized : (get().transactions.length > 0 ? get().transactions : dummyTransactions), 
-                isLoadingData: false 
+            const [txs, cats, budgets, wallets] = await Promise.all([
+                getTransactionsDB(),
+                getCategoriesDB(),
+                getBudgetsDB(),
+                getWalletsDB(),
+            ]);
+            set({
+                transactions: txs,
+                categories: cats,
+                budgets,
+                wallets,
             });
         } catch (error) {
-            console.warn('Backend unavailable, using local transactions data');
-            set((state) => ({
-                transactions: state.transactions.length > 0 ? state.transactions : dummyTransactions,
-                isLoadingData: false,
-            }));
+            console.error('Error loading SQLite data:', error);
+        } finally {
+            set({ isLoadingData: false });
         }
+    },
+
+    fetchTransactions: async () => {
+        const txs = await getTransactionsDB();
+        set({ transactions: txs });
     },
 
     fetchBudgets: async () => {
-        try {
-            const { data } = await api.get('/budgets');
-            const normalized: Budget[] = Array.isArray(data)
-                ? data.map((b: any) => ({
-                    ...b,
-                    id: b.id || b._id,
-                }))
-                : [];
-            set({ 
-                budgets: normalized.length > 0 ? normalized : (get().budgets.length > 0 ? get().budgets : dummyBudgets) 
-            });
-        } catch (error) {
-            console.warn('Backend unavailable, using local budgets data');
-            set((state) => ({
-                budgets: state.budgets.length > 0 ? state.budgets : dummyBudgets,
-            }));
-        }
+        const budgets = await getBudgetsDB();
+        set({ budgets });
     },
 
-    //  Transactions CRUD (talks to backend with offline/local fallback)
+    fetchCategories: async () => {
+        const cats = await getCategoriesDB();
+        set({ categories: cats });
+    },
+
+    fetchWallets: async () => {
+        const wallets = await getWalletsDB();
+        set({ wallets });
+    },
+
+    // ── Transaction CRUD (SQLite-backed) ──
     addTransaction: async (tx) => {
-        try {
-            const { data } = await api.post('/transactions', tx);
-            const normalized: Transaction = {
-                ...data,
-                id: data.id || data._id,
-            };
-            set((state) => ({
-                transactions: [normalized, ...state.transactions],
-            }));
-        } catch (error) {
-            console.warn('Backend unavailable, adding transaction locally');
-            const localTx: Transaction = {
-                ...tx,
-                id: `txn-${Date.now()}`,
-                createdAt: new Date().toISOString(),
-            };
-            set((state) => ({
-                transactions: [localTx, ...state.transactions],
-            }));
-        }
-    },
-
-    deleteTransaction: async (id) => {
-        try {
-            await api.delete(`/transactions/${id}`);
-        } catch (error) {
-            console.warn('Backend unavailable, deleting transaction locally');
-        }
-        set((state) => ({
-            transactions: state.transactions.filter((tx) => tx.id !== id),
-        }));
+        const fullTx: Transaction = {
+            ...tx,
+            id: 'id' in tx && tx.id ? tx.id : `tx_${Date.now()}`,
+            createdAt: 'createdAt' in tx && tx.createdAt ? tx.createdAt : new Date().toISOString(),
+        };
+        await insertTransactionDB(fullTx);
+        set((state) => ({ transactions: [fullTx, ...state.transactions] }));
     },
 
     updateTransaction: async (id, updated) => {
-        try {
-            await api.put(`/transactions/${id}`, updated);
-        } catch (error) {
-            console.warn('Backend unavailable, updating transaction locally');
-        }
+        await updateTransactionDB(id, updated);
         set((state) => ({
-            transactions: state.transactions.map((tx) =>
-                tx.id === id ? { ...tx, ...updated } : tx
-            ),
+            transactions: state.transactions.map((t) => (t.id === id ? { ...t, ...updated } : t)),
         }));
     },
 
-    //  Budgets CRUD (talks to backend with offline/local fallback) 
+    deleteTransaction: async (id) => {
+        await deleteTransactionDB(id);
+        set((state) => ({
+            transactions: state.transactions.filter((t) => t.id !== id),
+        }));
+    },
+
+    // ── Budget CRUD (SQLite-backed) ──
     addBudget: async (budget) => {
-        try {
-            const { data } = await api.post('/budgets', budget);
-            const normalized: Budget = {
-                ...data,
-                id: data.id || data._id,
-            };
-            set((state) => ({
-                budgets: [normalized, ...state.budgets],
-            }));
-        } catch (error) {
-            console.warn('Backend unavailable, adding budget locally');
-            const localBudget: Budget = {
-                ...budget,
-                id: `budget-${Date.now()}`,
-            };
-            set((state) => ({
-                budgets: [localBudget, ...state.budgets],
-            }));
-        }
+        const fullBudget: Budget = {
+            ...budget,
+            id: 'id' in budget && budget.id ? budget.id : `b_${Date.now()}`,
+        };
+        await insertBudgetDB(fullBudget);
+        set((state) => ({ budgets: [fullBudget, ...state.budgets] }));
+    },
+
+    updateBudget: async (id, updated) => {
+        await updateBudgetDB(id, updated);
+        set((state) => ({
+            budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...updated } : b)),
+        }));
     },
 
     deleteBudget: async (id) => {
-        try {
-            await api.delete(`/budgets/${id}`);
-        } catch (error) {
-            console.warn('Backend unavailable, deleting budget locally');
-        }
+        await deleteBudgetDB(id);
         set((state) => ({
             budgets: state.budgets.filter((b) => b.id !== id),
         }));
     },
 
-    updateBudget: async (id, updated) => {
-        try {
-            await api.put(`/budgets/${id}`, updated);
-        } catch (error) {
-            console.warn('Backend unavailable, updating budget locally');
-        }
+    // ── Categories & Wallets CRUD ──
+    addCategory: async (cat) => {
+        const fullCat: Category = {
+            ...cat,
+            id: `cat_custom_${Date.now()}`,
+        };
+        await insertCategoryDB(fullCat);
+        set((state) => ({ categories: [...state.categories, fullCat] }));
+    },
+
+    deleteCategory: async (id) => {
+        await deleteCategoryDB(id);
         set((state) => ({
-            budgets: state.budgets.map((b) =>
-                b.id === id ? { ...b, ...updated } : b
-            ),
+            categories: state.categories.filter((c) => c.id !== id || c.isBuiltIn),
         }));
     },
 
-    //  Categories & Wallets (still local for now) 
-    addCategory: (cat) => set((state) => ({
-        categories: [
-            ...state.categories,
-            {
-                ...cat,
-                id: `cat-custom-${Date.now()}`,
-            },
-        ],
-    })),
+    addWallet: async (wallet) => {
+        const fullWallet: Wallet = {
+            ...wallet,
+            id: `wallet_${Date.now()}`,
+            createdAt: new Date().toISOString(),
+        };
+        await insertWalletDB(fullWallet);
+        set((state) => ({ wallets: [...state.wallets, fullWallet] }));
+    },
 
-    deleteCategory: (id) => set((state) => ({
-        categories: state.categories.filter((c) => c.id !== id || c.isBuiltIn),
-    })),
+    deleteWallet: async (id) => {
+        await deleteWalletDB(id);
+        set((state) => ({
+            wallets: state.wallets.filter((w) => w.id !== id),
+        }));
+    },
 
-    addWallet: (wallet) => set((state) => ({
-        wallets: [
-            ...state.wallets,
-            {
-                ...wallet,
-                id: `wallet-${Date.now()}`
-            },
-        ],
-    })),
+    // ── Telegram Bot / Export Pipeline ──
+    getExportPayload: async (): Promise<ExportDataPayload> => {
+        return await exportDatabaseToJSON();
+    },
 
-    deleteWallet: (id) => set((state) => ({
-        wallets: state.wallets.filter((wallet) => wallet.id !== id),
-    })),
+    exportDataToJSONFile: async (): Promise<string | null> => {
+        try {
+            const data = await exportDatabaseToJSON();
+            const jsonString = JSON.stringify(data, null, 2);
+            const fileName = `BanKoni_export_vault_${Date.now()}.json`;
+            const baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
+            const filePath = `${baseDir}${fileName}`;
+            await FileSystem.writeAsStringAsync(filePath, jsonString, {
+                encoding: FileSystem.EncodingType.UTF8,
+            });
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(filePath, {
+                    mimeType: 'application/json',
+                    dialogTitle: 'Exporting Bankoni Vault for Telegram Bot',
+                    UTI: 'public.json',
+                });
+            }
+            return fileName;
+        } catch (error) {
+            console.error('Error exporting BanKoni data:', error);
+            return null;
+        }
+    },
 
-    //  Getters
+    // ── Computed Getters ──
     totalIncome: () => {
-        return get().transactions
-            .filter((tx) => tx.type === 'CREDIT')
+        return get()
+            .transactions.filter((tx) => tx.type === 'CREDIT')
             .reduce((sum, tx) => sum + tx.amount, 0);
     },
 
     totalExpenses: () => {
-        return get().transactions
-            .filter((tx) => tx.type === 'DEBIT')
+        return get()
+            .transactions.filter((tx) => tx.type === 'DEBIT')
             .reduce((sum, tx) => sum + tx.amount, 0);
     },
 
@@ -379,17 +441,21 @@ const useBanKoniStore = create<BanKoniStore>((set, get) => ({
     },
 
     transactionByCategory: () => {
-        return get().transactions
-            .filter((tx) => tx.type === 'DEBIT')
-            .reduce((acc, tx) => {
-                acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
-                return acc;
-            }, {} as Record<string, number>);
+        return get()
+            .transactions.filter((tx) => tx.type === 'DEBIT')
+            .reduce(
+                (acc, tx) => {
+                    acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
+                    return acc;
+                },
+                {} as Record<string, number>
+            );
     },
 
-    toggleTheme: () => set((state) => ({
-        theme: state.theme === 'light' ? 'dark' : 'light',
-    })),
+    toggleTheme: () =>
+        set((state) => ({
+            theme: state.theme === 'light' ? 'dark' : 'light',
+        })),
 }));
 
 export default useBanKoniStore;

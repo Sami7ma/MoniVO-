@@ -1,31 +1,30 @@
+// frontend/db/database.ts
+// Robust, local-first SQLite database layer for BanKoni
+
 import * as SQLite from 'expo-sqlite';
 import type { Transaction } from '../types/Transaction';
 import type { Budget } from '../types/Budget';
 import type { Category } from '../types/Category';
 import type { Wallet } from '../types/Wallet';
-import type { User } from '../types/User';
+import type { User, ExportDataPayload } from '../types/User';
 import { defaultCategories } from '../constants/defaultCategories';
 import { defaultWallet, dummyBudgets, dummyTransactions } from '../utils/dummyData';
 
 const DB_NAME = 'bankoni.db';
+let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-// Singleton DB connection instance
-let dbInstance: SQLite.SQLiteDatabase | null = null;
-
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-    if (!dbInstance) {
-        dbInstance = await SQLite.openDatabaseAsync(DB_NAME);
+export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+    if (!dbPromise) {
+        dbPromise = SQLite.openDatabaseAsync(DB_NAME);
     }
-    return dbInstance;
+    return dbPromise;
 }
 
-
 // 1. DATABASE INITIALIZATION & SCHEMA DEFINITION
-
 export async function initDatabase(): Promise<void> {
     const db = await getDatabase();
 
-    // Enable WAL mode for high concurrency & Foreign Keys for integrity
+    // WAL mode for high performance & durability
     await db.execAsync(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -33,8 +32,10 @@ export async function initDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
+      email TEXT,
+      pin_hash TEXT NOT NULL,
       avatar_url TEXT,
+      is_biometric_enabled INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     );
 
@@ -64,11 +65,11 @@ export async function initDatabase(): Promise<void> {
       id TEXT PRIMARY KEY,
       amount REAL NOT NULL,
       type TEXT CHECK(type IN ('CREDIT', 'DEBIT')) NOT NULL,
-      category_id TEXT NOT NULL,
+      category_id TEXT NOT NULL REFERENCES categories(id),
       note TEXT,
       date TEXT NOT NULL,
       status TEXT CHECK(status IN ('PENDING', 'CLEARED')) NOT NULL DEFAULT 'CLEARED',
-      wallet_id TEXT NOT NULL,
+      wallet_id TEXT NOT NULL REFERENCES wallets(id),
       current_balance REAL,
       source TEXT DEFAULT 'manual',
       raw_sms TEXT,
@@ -77,7 +78,7 @@ export async function initDatabase(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS budgets (
       id TEXT PRIMARY KEY,
-      category_id TEXT NOT NULL,
+      category_id TEXT NOT NULL REFERENCES categories(id),
       limit_amount REAL NOT NULL,
       start_date TEXT NOT NULL,
       end_date TEXT NOT NULL,
@@ -86,19 +87,16 @@ export async function initDatabase(): Promise<void> {
     );
   `);
 
-    // Auto-seed initial baseline data if tables are empty
     await seedInitialData(db);
 }
 
-
-// 2. SEEDING LOGIC (First-run bootstrap)
-
+// 2. SEEDING LOGIC
 async function seedInitialData(db: SQLite.SQLiteDatabase): Promise<void> {
-    // Check categories
-    const catCountResult = await db.getFirstAsync<{ count: number }>(
+    // Categories seed
+    const catCount = await db.getFirstAsync<{ count: number }>(
         'SELECT COUNT(*) as count FROM categories;'
     );
-    if (!catCountResult || catCountResult.count === 0) {
+    if (!catCount || catCount.count === 0) {
         for (const cat of defaultCategories) {
             await db.runAsync(
                 `INSERT INTO categories (id, name, icon_key, color_key, flow, essential, recurring, is_built_in, is_custom)
@@ -118,11 +116,11 @@ async function seedInitialData(db: SQLite.SQLiteDatabase): Promise<void> {
         }
     }
 
-    // Check wallets
-    const walletCountResult = await db.getFirstAsync<{ count: number }>(
+    // Wallets seed
+    const walletCount = await db.getFirstAsync<{ count: number }>(
         'SELECT COUNT(*) as count FROM wallets;'
     );
-    if (!walletCountResult || walletCountResult.count === 0) {
+    if (!walletCount || walletCount.count === 0) {
         await db.runAsync(
             `INSERT INTO wallets (id, name, icon, balance, currency, is_default, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?);`,
@@ -138,33 +136,11 @@ async function seedInitialData(db: SQLite.SQLiteDatabase): Promise<void> {
         );
     }
 
-    // Check budgets
-    const budgetCountResult = await db.getFirstAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM budgets;'
-    );
-    if (!budgetCountResult || budgetCountResult.count === 0) {
-        for (const b of dummyBudgets) {
-            await db.runAsync(
-                `INSERT INTO budgets (id, category_id, limit_amount, start_date, end_date, recurring, alert_threshold)
-         VALUES (?, ?, ?, ?, ?, ?, ?);`,
-                [
-                    b.id,
-                    b.categoryId,
-                    b.limitAmount,
-                    b.startDate,
-                    b.endDate,
-                    b.recurring || 'monthly',
-                    b.alertThreshold ?? 0.8,
-                ]
-            );
-        }
-    }
-
-    // Check transactions
-    const txCountResult = await db.getFirstAsync<{ count: number }>(
+    // Transactions seed
+    const txCount = await db.getFirstAsync<{ count: number }>(
         'SELECT COUNT(*) as count FROM transactions;'
     );
-    if (!txCountResult || txCountResult.count === 0) {
+    if (!txCount || txCount.count === 0) {
         for (const tx of dummyTransactions) {
             await db.runAsync(
                 `INSERT INTO transactions (id, amount, type, category_id, note, date, status, wallet_id, current_balance, source, raw_sms, created_at)
@@ -186,15 +162,93 @@ async function seedInitialData(db: SQLite.SQLiteDatabase): Promise<void> {
             );
         }
     }
+
+    // Budgets seed
+    const budgetCount = await db.getFirstAsync<{ count: number }>(
+        'SELECT COUNT(*) as count FROM budgets;'
+    );
+    if (!budgetCount || budgetCount.count === 0) {
+        for (const b of dummyBudgets) {
+            await db.runAsync(
+                `INSERT INTO budgets (id, category_id, limit_amount, start_date, end_date, recurring, alert_threshold)
+         VALUES (?, ?, ?, ?, ?, ?, ?);`,
+                [
+                    b.id,
+                    b.categoryId,
+                    b.limitAmount,
+                    b.startDate,
+                    b.endDate,
+                    b.recurring || 'monthly',
+                    b.alertThreshold ?? 0.8,
+                ]
+            );
+        }
+    }
 }
 
+// 3. USER REPOSITORY (Local-First Authentication)
+export async function getActiveUserDB(): Promise<{ user: User; pinHash: string } | null> {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<any>('SELECT * FROM users LIMIT 1;');
+    if (!row) return null;
 
-// 3. TRANSACTIONS CRUD REPOSITORY
+    return {
+        user: {
+            id: row.id,
+            name: row.name,
+            username: row.username || row.name.toLowerCase().replace(/\s+/g, '_'),
+            email: row.email || undefined,
+            isBiometricEnabled: Boolean(row.is_biometric_enabled),
+            createdAt: row.created_at,
+        },
+        pinHash: row.pin_hash,
+    };
+}
 
+export async function saveUserDB(user: User, pinHash: string): Promise<void> {
+    const db = await getDatabase();
+    await db.runAsync(
+        `INSERT INTO users (
+            id,
+            name,
+            email,
+            pin_hash,
+            is_biometric_enabled,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?);`,
+        [
+            user.id,
+            user.name,
+            user.email || null,
+            pinHash,
+            user.isBiometricEnabled ? 1 : 0,
+            user.createdAt,
+        ]
+    );
+}
+
+export async function updateUserPinHashDB(userId: string, pinHash: string): Promise<void> {
+    const db = await getDatabase();
+    await db.runAsync(
+        'UPDATE users SET pin_hash = ? WHERE id = ?;',
+        [pinHash, userId]
+    );
+}
+export async function setBiometricEnabledDB(userId: string, enabled: boolean): Promise<void> {
+    const db = await getDatabase();
+    await db.runAsync(
+        'UPDATE users SET is_biometric_enabled = ? WHERE id = ?;', [
+        enabled ? 1 : 0,
+        userId,
+    ]);
+}
+
+// 4. TRANSACTIONS CRUD REPOSITORY
 export async function getTransactionsDB(): Promise<Transaction[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(
-        'SELECT * FROM transactions ORDER BY date DESC;'
+        'SELECT * FROM transactions ORDER BY date DESC, created_at DESC;'
     );
 
     return rows.map((r) => ({
@@ -275,12 +329,9 @@ export async function updateTransactionDB(
     }
 
     if (fields.length === 0) return;
-
     values.push(id);
-    await db.runAsync(
-        `UPDATE transactions SET ${fields.join(', ')} WHERE id = ?;`,
-        values
-    );
+
+    await db.runAsync(`UPDATE transactions SET ${fields.join(', ')} WHERE id = ?;`, values);
 }
 
 export async function deleteTransactionDB(id: string): Promise<void> {
@@ -288,9 +339,7 @@ export async function deleteTransactionDB(id: string): Promise<void> {
     await db.runAsync('DELETE FROM transactions WHERE id = ?;', [id]);
 }
 
-
-// 4. BUDGETS CRUD REPOSITORY
-
+// 5. BUDGETS CRUD REPOSITORY
 export async function getBudgetsDB(): Promise<Budget[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>('SELECT * FROM budgets;');
@@ -357,12 +406,9 @@ export async function updateBudgetDB(
     }
 
     if (fields.length === 0) return;
-
     values.push(id);
-    await db.runAsync(
-        `UPDATE budgets SET ${fields.join(', ')} WHERE id = ?;`,
-        values
-    );
+
+    await db.runAsync(`UPDATE budgets SET ${fields.join(', ')} WHERE id = ?;`, values);
 }
 
 export async function deleteBudgetDB(id: string): Promise<void> {
@@ -370,10 +416,12 @@ export async function deleteBudgetDB(id: string): Promise<void> {
     await db.runAsync('DELETE FROM budgets WHERE id = ?;', [id]);
 }
 
-// 5. CATEGORIES CRUD REPOSITORY
+// 6. CATEGORIES & WALLETS REPOSITORY
 export async function getCategoriesDB(): Promise<Category[]> {
     const db = await getDatabase();
-    const rows = await db.getAllAsync<any>('SELECT * FROM categories;');
+    const rows = await db.getAllAsync<any>(
+        'SELECT * FROM categories ORDER BY is_built_in DESC, name ASC;'
+    );
 
     return rows.map((c) => ({
         id: c.id,
@@ -409,14 +457,14 @@ export async function insertCategoryDB(category: Category): Promise<void> {
 
 export async function deleteCategoryDB(id: string): Promise<void> {
     const db = await getDatabase();
-    // Prevent deleting built-in categories
     await db.runAsync('DELETE FROM categories WHERE id = ? AND is_built_in = 0;', [id]);
 }
 
-// 6. WALLETS CRUD REPOSITORY
 export async function getWalletsDB(): Promise<Wallet[]> {
     const db = await getDatabase();
-    const rows = await db.getAllAsync<any>('SELECT * FROM wallets;');
+    const rows = await db.getAllAsync<any>(
+        'SELECT * FROM wallets ORDER BY is_default DESC, created_at ASC;'
+    );
 
     return rows.map((w) => ({
         id: w.id,
@@ -448,31 +496,40 @@ export async function insertWalletDB(wallet: Wallet): Promise<void> {
 
 export async function deleteWalletDB(id: string): Promise<void> {
     const db = await getDatabase();
-    await db.runAsync('DELETE FROM wallets WHERE id = ?;', [id]);
+    await db.runAsync('DELETE FROM wallets WHERE id = ? AND is_default = 0;', [id]);
 }
 
-// 7. USER PROFILE REPOSITORY
-export async function getUserDB(id: string): Promise<User | null> {
+// 7. EXPORT DATA BUILDER FOR TELEGRAM BOT / DOWNLOADABLE BACKUP
+export async function exportDatabaseToJSON(): Promise<ExportDataPayload> {
     const db = await getDatabase();
-    const row = await db.getFirstAsync<any>(
-        'SELECT * FROM users WHERE id = ?;',
-        [id]
-    );
-    if (!row) return null;
+    const userRow = await getActiveUserDB();
+    const wallets = await getWalletsDB();
+    const categories = await getCategoriesDB();
+    const budgets = await getBudgetsDB();
+    const transactions = await getTransactionsDB();
+
+    const totalCredits = transactions
+        .filter((t) => t.type === 'CREDIT')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalDebits = transactions
+        .filter((t) => t.type === 'DEBIT')
+        .reduce((sum, t) => sum + t.amount, 0);
+
     return {
-        id: row.id,
-        name: row.name,
-        email: row.email,
-        avatarUrl: row.avatar_url || undefined,
-        createdAt: row.created_at,
+        version: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        user: userRow ? userRow.user : null,
+        wallets,
+        categories,
+        budgets,
+        transactions,
+        summary: {
+            totalTransactions: transactions.length,
+            totalBalance: totalCredits - totalDebits,
+            totalIncome: totalCredits,
+            totalExpenses: totalDebits,
+            currency: 'ETB',
+        },
     };
-}
-
-export async function saveUserDB(user: User): Promise<void> {
-    const db = await getDatabase();
-    await db.runAsync(
-        `INSERT OR REPLACE INTO users (id, name, email, avatar_url, created_at)
-     VALUES (?, ?, ?, ?, ?);`,
-        [user.id, user.name, user.email, user.avatarUrl || null, user.createdAt]
-    );
 }

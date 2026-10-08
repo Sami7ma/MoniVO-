@@ -1,5 +1,7 @@
-// the login form screen. User enter emai l+ passwords to access their account
-import React, { useState } from "react";
+// frontend/app/(auth)/LoginScreen.tsx
+// Vault unlock screen: Numeric PIN + optional biometric unlock
+
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,258 +12,417 @@ import {
   Platform,
   ScrollView,
   Alert,
-} from "react-native";
-
-import { StatusBar } from "expo-status-bar";
-import { Eye, EyeOff } from "lucide-react-native";
-import useTheme from "../../hooks/useTheme";
-import useBanKoniStore from "../../store/useBanKoniStore";
-import PrimaryButton from "../../components/common/buttons/PrimaryButton";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { AuthStackParamList } from "../navigation/AppNavigator";
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Fingerprint, Lock, Eye, EyeOff } from 'lucide-react-native';
+import useTheme from '../../hooks/useTheme';
+import useBanKoniStore from '../../store/useBanKoniStore';
+import PrimaryButton from '../../components/common/buttons/PrimaryButton';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { AuthStackParamList } from '../navigation/AppNavigator';
 
 type Props = {
-  navigation: StackNavigationProp<AuthStackParamList, "Login">;
+  navigation: StackNavigationProp<AuthStackParamList, 'Login'>;
 };
+
 export default function LoginScreen({ navigation }: Props) {
   const colors = useTheme();
   const styles = createStyles(colors);
 
-  // state
-  // usestate() creates a value and functio to update it
-  // format : const[value, setValue] = useState(initialValue)
-  // every time setValue is called  the component rerender with the new value
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
 
-  const [email, setEmail] = useState("Someone@gmail.com");
-  const [passwords, setPasswords] = useState("someone1");
-  const [showPassword, setShowPassword] = useState(false); // for show/ hide password
-  const [loading, setLoading] = useState(false); // Track loading state
-  // Get the login function from store
-  const login = useBanKoniStore((state) => state.login);
+  const registeredUser = useBanKoniStore(
+    (state) => state.registeredUser
+  );
 
-  // Handlers
-  const handleLogin = async () => {
-    if (!email.trim() || !passwords.trim()) {
-      Alert.alert("Validation Error", "Please fill in all fields");
+  const isBiometricSupported = useBanKoniStore(
+    (state) => state.isBiometricSupported
+  );
+
+  const loginWithPin = useBanKoniStore(
+    (state) => state.loginWithPin
+  );
+
+  const loginWithBiometrics = useBanKoniStore(
+    (state) => state.loginWithBiometrics
+  );
+
+  /*
+   * Optional automatic biometric prompt.
+   *
+   * If the user has enabled biometrics for this vault
+   * and the device supports it, the biometric prompt
+   * appears automatically when the login screen opens.
+   */
+  useEffect(() => {
+    if (
+      registeredUser?.isBiometricEnabled &&
+      isBiometricSupported
+    ) {
+      handleBiometricUnlock();
+    }
+  }, [registeredUser?.isBiometricEnabled, isBiometricSupported]);
+
+  const handlePinLogin = async () => {
+    if (!/^\d{4,12}$/.test(pin)) {
+      Alert.alert(
+        'Invalid PIN',
+        'Please enter a PIN between 4 and 12 digits.'
+      );
       return;
     }
 
-    setLoading(true); // Show loading state
+    setLoading(true);
+
     try {
-      await login(email.trim(), passwords.trim());
-      // Upon successful login, AppNavigator automatically switches to AppTabNavigator
+      const ok = await loginWithPin(pin);
+
+      if (!ok) {
+        Alert.alert(
+          'Incorrect PIN',
+          'The PIN entered is not correct. Please try again.'
+        );
+
+        setPin('');
+      }
     } catch (error: any) {
-      const message =
-        error.response?.data?.message ||
-        "Login failed. Please check your credentials.";
-      Alert.alert("Login Error", message);
+      Alert.alert(
+        'Unlock Error',
+        error?.message || 'Authentication failed.'
+      );
     } finally {
-      setLoading(false); // Hide loading state
+      setLoading(false);
+    }
+  };
+
+  const handleBiometricUnlock = async () => {
+    if (
+      !registeredUser?.isBiometricEnabled ||
+      !isBiometricSupported
+    ) {
+      return;
+    }
+
+    if (biometricLoading) {
+      return;
+    }
+
+    setBiometricLoading(true);
+
+    try {
+      const success = await loginWithBiometrics();
+
+      if (!success) {
+        Alert.alert(
+          'Biometric Authentication Failed',
+          'Biometric authentication was not successful. Please use your PIN instead.'
+        );
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Biometric Error',
+        error?.message ||
+        'Biometric authentication could not be completed.'
+      );
+    } finally {
+      setBiometricLoading(false);
     }
   };
 
   const handleGoToRegister = () => {
-    navigation.navigate("Register"); // Now this actually works!
+    navigation.navigate('Register');
   };
-  // UI
+
+  // Real name stays a real name.
+  const displayName = registeredUser?.name || 'Your Vault';
+
+  const biometricsEnabled =
+    registeredUser?.isBiometricEnabled &&
+    isBiometricSupported;
 
   return (
-    // keyboardAvoidngView  is a wrapper that shifts the whole screen up
-    // when the keyboard appears - preventing content from being hidden
-    // behavior: platform specific adjust
-    // behavior='pladding' works best on ios, 'height' works better on Android.
-
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* StatusBar  */}
       <StatusBar style={colors.statusBar} />
 
-      {/* ScrollView allows us to scroll if the keyboard pushes content up */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-      // "handled" means tapping outside the keyboad dismmes it
-      // without accidentally triggering other button
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.logo}>
-            Moni<Text style={styles.logoItalic}>Vo</Text>
+          <Text style={styles.logo}>BanKoni</Text>
+
+          <Text style={styles.tagline}>
+            Welcome Back
           </Text>
-          <Text style={styles.tagline}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to your account</Text>
+
+          <Text style={styles.userBadge}>
+            {displayName}
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Enter your PIN to access your vault
+          </Text>
         </View>
-        {/* Form Card */}
-        <View style={styles.card}>
-          {/* Email input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email} // controlled: input shows what in state
-              onChangeText={setEmail} //called every keystrodk - updates state
-              placeholder="you@example.com" // shows email keyboard onphone
-              placeholderTextColor={colors.textSecondary} //makes placeholer text gray
-              keyboardType="email-address" // shows emaul keyboard on phone
-              autoCapitalize="none" // prevents auto-capitalizing first letter
-              autoCorrect={false} // turns off predictive text
+
+        {/* PIN INPUT */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>
+            Security PIN
+          </Text>
+
+          <View style={styles.inputRow}>
+            <Lock
+              size={18}
+              color={colors.textSecondary}
+              style={styles.lockIcon}
             />
+
+            <TextInput
+              style={styles.textInput}
+              value={pin}
+              onChangeText={(text) => {
+                const clean = text
+                  .replace(/[^0-9]/g, '')
+                  .slice(0, 12);
+
+                setPin(clean);
+              }}
+              placeholder="Enter your PIN"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="number-pad"
+              secureTextEntry={!showPin}
+              autoFocus
+              maxLength={12}
+              editable={!loading && !biometricLoading}
+            />
+
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPin((prev) => !prev)}
+              disabled={loading || biometricLoading}
+              activeOpacity={0.7}
+            >
+              {showPin ? (
+                <EyeOff
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              ) : (
+                <Eye
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              )}
+            </TouchableOpacity>
           </View>
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Passwords</Text>
-
-            {/* We wrap input + eye icon in a row View */}
-            <View style={styles.passwordRow}>
-              <TextInput
-                style={styles.passwordInput}
-                value={passwords}
-                onChangeText={setPasswords}
-                placeholder="****************"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showPassword} // shows dots if true, text if false
-                // we flip it with our toggle handler
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {/* Eye icon -toggle password vissibility  */}
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              // Tou
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color={colors.textSecondary} />
-                ) : (
-                  <Eye size={20} color={colors.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-
-          {/* Login Button — uses reusable PrimaryButton */}
-          <PrimaryButton
-            label={loading ? "Signing In..." : "Sign In"} // Show loading text
-            onPress={handleLogin}
-            style={{ marginTop: 8 }}
-            disabled={loading} // Disable button while loading
-          />
         </View>
-        {/* Register Link */}
+
+        {/* PIN UNLOCK */}
+        <PrimaryButton
+          label={loading ? 'Verifying...' : 'Unlock Vault'}
+          onPress={handlePinLogin}
+          disabled={
+            loading ||
+            biometricLoading ||
+            pin.length < 4
+          }
+          style={styles.pinButton}
+        />
+
+        {/* BIOMETRIC UNLOCK */}
+        {biometricsEnabled && (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.bioButton,
+                {
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={handleBiometricUnlock}
+              disabled={loading || biometricLoading}
+              activeOpacity={0.8}
+            >
+              <Fingerprint
+                size={24}
+                color={colors.champagne}
+              />
+
+              <Text style={styles.bioButtonText}>
+                {biometricLoading
+                  ? 'Authenticating...'
+                  : 'Use Biometrics'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* REGISTER / CREATE NEW */}
         <View style={styles.registerRow}>
           <Text style={styles.registerText}>
-            Don't have an account?{" "}
-            <TouchableOpacity onPress={handleGoToRegister}>
-              <Text style={styles.registerLink}>Create One</Text>
-            </TouchableOpacity>
+            {registeredUser
+              ? 'Not your vault? '
+              : "Don't have a vault yet? "}
           </Text>
+
+          <TouchableOpacity
+            onPress={handleGoToRegister}
+            disabled={loading || biometricLoading}
+          >
+            <Text style={styles.registerLink}>
+              {registeredUser
+                ? 'Create New'
+                : 'Create One'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-// styles
 
-const createStyles = (colors: ReturnType<typeof useTheme>) =>
+const createStyles = (
+  colors: ReturnType<typeof useTheme>
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
+
     scrollContent: {
-      flexGrow: 1, // flexgro lets scrollviews content epan to fill space
-      justifyContent: "center",
+      flexGrow: 1,
+      justifyContent: 'center',
       paddingHorizontal: 22,
       paddingVertical: 48,
     },
+
     header: {
       marginBottom: 32,
-      alignItems: "center",
+      alignItems: 'center',
     },
+
     logo: {
-      fontSize: 40,
-      fontWeight: "bold",
+      fontSize: 42,
+      fontWeight: 'bold',
       color: colors.champagne,
       letterSpacing: 2,
-      fontFamily: Platform.OS === "ios" ? "Snell Roundhand" : "cursive",
+      fontFamily:
+        Platform.OS === 'ios'
+          ? 'Snell Roundhand'
+          : 'cursive',
     },
-    logoItalic: {
-      fontStyle: "italic",
-      fontFamily: Platform.OS === "ios" ? "Snell Roundhand" : "cursive",
-    },
+
     tagline: {
-      fontSize: 24,
-      fontWeight: "600",
+      fontSize: 22,
+      fontWeight: '700',
       color: colors.textPrimary,
-      marginBottom: 6,
+      marginTop: 6,
     },
-    subtitle: {
+
+    userBadge: {
       fontSize: 16,
-      color: colors.textSecondary,
+      fontWeight: '600',
+      color: colors.champagne,
+      marginTop: 4,
     },
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: 22,
-      padding: 24,
-      gap: 4,
-    },
-    inputGroup: {
-      marginBottom: 16,
-    },
-    label: {
+
+    subtitle: {
       fontSize: 13,
       color: colors.textSecondary,
+      marginTop: 4,
+      textAlign: 'center',
+    },
+
+    inputGroup: {
+      marginBottom: 12,
+    },
+
+    label: {
+      fontSize: 12,
+      color: colors.textSecondary,
       marginBottom: 8,
-      fontWeight: "500",
+      fontWeight: '600',
       letterSpacing: 0.5,
-      textTransform: "uppercase",
+      textTransform: 'uppercase',
     },
-    input: {
-      backgroundColor: colors.surfaceAlt,
-      color: colors.textPrimary,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 15,
-      borderWidth: 1,
-      borderColor: colors.border, //subtle border
-    },
-    passwordRow: {
-      flexDirection: "row", // input and eye icon sit side by side
-      alignItems: "center", //vertically centers the items
+
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: colors.surfaceAlt,
       borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.border,
-    },
-    passwordInput: {
-      flex: 1, // allows input to take all available space
-      color: colors.textPrimary,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 15,
-    },
-    eyeButton: {
-      padding: 14,
+      paddingHorizontal: 14,
     },
 
-    // loginButton and loginButtonText REMOVED
-    // → now handled by PrimaryButton component
+    lockIcon: {
+      marginRight: 8,
+    },
+
+    textInput: {
+      flex: 1,
+      color: colors.textPrimary,
+      paddingVertical: 14,
+      fontSize: 16,
+      letterSpacing: 3,
+    },
+
+    eyeBtn: {
+      padding: 8,
+    },
+
+    pinButton: {
+      marginTop: 8,
+    },
+
+    /*
+     * One single biometric button.
+     * The fingerprint icon and "Use Biometrics"
+     * are part of the same touch target.
+     */
+    bioButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceAlt,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingVertical: 14,
+      marginTop: 12,
+      gap: 10,
+    },
+
+    bioButtonText: {
+      fontSize: 14,
+      textAlign: 'center',
+      fontWeight: '600',
+      color: colors.textPrimary,
+    },
+
     registerRow: {
-      flexDirection: "row",
-      justifyContent: "center",
+      flexDirection: 'row',
+      justifyContent: 'center',
       marginTop: 28,
     },
+
     registerText: {
       color: colors.textSecondary,
       fontSize: 14,
     },
+
     registerLink: {
       color: colors.champagne,
       fontSize: 14,
-      fontWeight: "600",
+      fontWeight: '700',
     },
   });
