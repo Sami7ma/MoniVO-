@@ -1,11 +1,13 @@
 // frontend/store/useBanKoniStore.ts
 // The central brain of BanKoni — 100% Local-First with SQLite, PIN & Biometrics
 
+
 import { create } from 'zustand';
+import * as Crypto from 'expo-crypto';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { hashPin, verifyPin, isHashedPin, } from '../security/pinSecurity';
+import { hashPin, verifyPin, isCurrentPinHash, validateNewPin } from '../security/pinSecurity';
 import type { Transaction } from '../types/Transaction';
 import type { Category } from '../types/Category';
 import type { Budget } from '../types/Budget';
@@ -31,40 +33,47 @@ import {
     insertWalletDB,
     deleteWalletDB,
     exportDatabaseToJSON,
-    updateUserPinHashDB
+    updateUserPinHashDB,
+    getPinAttemptStateDB,
+    recordFailedPinAttemptDB,
+    resetPinAttemptStateDB,
 } from '../db/database';
 
+export type BiometricLoginResult =
+    | { status: 'success' }
+    | { status: 'cancelled' }
+    | { status: 'unavailable' }
+    | { status: 'failed'; message?: string }
+    | { status: 'error'; message: string };
+
 interface BanKoniStore {
-    // State
     user: User | null;
     registeredUser: User | null;
     isBiometricSupported: boolean;
     isLoadingAuth: boolean;
+    authError: string | null;
     isLoadingData: boolean;
+    dataError: string | null;
     transactions: Transaction[];
     categories: Category[];
     budgets: Budget[];
     wallets: Wallet[];
     theme: 'light' | 'dark';
 
-    // Auth & Security
+    // Authentication and security
     checkAuth: () => Promise<void>;
-    registerWithPin: (
-        name: string,
-        pin: string,
-        enableBiometrics?: boolean
-    ) => Promise<void>;
+    registerWithPin: (name: string, pin: string, enableBiometrics?: boolean, email?: string) => Promise<void>;
     loginWithPin: (pin: string) => Promise<boolean>;
-    loginWithBiometrics: () => Promise<boolean>;
+    loginWithBiometrics: () => Promise<BiometricLoginResult>;
     enableBiometrics: (enabled: boolean) => Promise<void>;
     logOut: () => Promise<void>;
     setUser: (user: User | null) => void;
 
     // Backwards-compatible aliases
-    login: (pincode: string) => Promise<void>;
+    login: (emailOrPin: string, pincode?: string) => Promise<void>;
     register: (name: string, pincode: string) => Promise<void>;
 
-    // Data Loading
+    // Data loading
     loadAllData: () => Promise<void>;
     fetchTransactions: () => Promise<void>;
     fetchBudgets: () => Promise<void>;
@@ -73,35 +82,64 @@ interface BanKoniStore {
 
     // Transaction CRUD
     addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'> | Transaction) => Promise<void>;
-    updateTransaction: (
-        id: string,
-        updated: Partial<Omit<Transaction, 'id' | 'createdAt'>>
-    ) => Promise<void>;
+    updateTransaction: (id: string, updated: Partial<Omit<Transaction, 'id' | 'createdAt'>>) => Promise<void>;
     deleteTransaction: (id: string) => Promise<void>;
 
-    // Budgets CRUD
+    // Budget CRUD
     addBudget: (budget: Omit<Budget, 'id'> | Budget) => Promise<void>;
     updateBudget: (id: string, updated: Partial<Omit<Budget, 'id'>>) => Promise<void>;
     deleteBudget: (id: string) => Promise<void>;
 
-    // Categories & Wallets CRUD
-    addCategory: (cat: Omit<Category, 'id'>) => Promise<void>;
+    // Category and wallet CRUD
+    addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
     deleteCategory: (id: string) => Promise<void>;
     addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'>) => Promise<void>;
     deleteWallet: (id: string) => Promise<void>;
 
-    // Telegram Bot / Data Export Pipeline
+    // Export
     exportDataToJSONFile: () => Promise<string | null>;
     getExportPayload: () => Promise<ExportDataPayload>;
 
-    // Computed Getters
+    // Derived values (ETB cleared activity only where applicable)
     totalIncome: () => number;
     totalExpenses: () => number;
     totalBalance: () => number;
     transactionByCategory: () => Record<string, number>;
 
-    // Themes
+    // Theme
     toggleTheme: () => void;
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+    return error instanceof Error && error.message.trim() ? error.message : fallback;
+}
+
+function makeId(prefix: string): string {
+    return `${prefix}_${Crypto.randomUUID()}`;
+}
+
+async function readAllFinancialData() {
+    const [transactions, categories, budgets, wallets] = await Promise.all([
+        getTransactionsDB(),
+        getCategoriesDB(),
+        getBudgetsDB(),
+        getWalletsDB(),
+    ]);
+    return { transactions, categories, budgets, wallets };
+}
+
+async function readTransactionsAndWallets() {
+    const [transactions, wallets] = await Promise.all([getTransactionsDB(), getWalletsDB()]);
+    return { transactions, wallets };
+}
+
+function getEtbClearedTransactions(state: Pick<BanKoniStore, 'transactions' | 'wallets'>): Transaction[] {
+    const etbWalletIds = new Set(
+        state.wallets.filter((wallet) => wallet.currency === 'ETB').map((wallet) => wallet.id),
+    );
+    return state.transactions.filter(
+        (transaction) => transaction.status === 'CLEARED' && etbWalletIds.has(transaction.walletId),
+    );
 }
 
 const useBanKoniStore = create<BanKoniStore>((set, get) => ({
@@ -109,353 +147,374 @@ const useBanKoniStore = create<BanKoniStore>((set, get) => ({
     registeredUser: null,
     isBiometricSupported: false,
     isLoadingAuth: true,
+    authError: null,
     isLoadingData: false,
+    dataError: null,
     transactions: [],
     categories: [],
     budgets: [],
     wallets: [],
     theme: 'light',
 
-    // ── Authentication & Security Lifecycle ──
+    // Discover the vault and device capabilities. A single screen owns the actual
+    // biometric prompt, preventing simultaneous prompts at startup and on Login.
     checkAuth: async () => {
-        set({ isLoadingAuth: true });
+        set({
+            isLoadingAuth: true,
+            authError: null,
+            dataError: null,
+            user: null,
+            transactions: [],
+            categories: [],
+            budgets: [],
+            wallets: [],
+        });
         try {
             await initDatabase();
-
-            const hasHardware = await LocalAuthentication.hasHardwareAsync();
-            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-            const canUseBiometrics = hasHardware && isEnrolled;
-            set({ isBiometricSupported: canUseBiometrics });
-
+            const [hasHardware, enrolled] = await Promise.all([
+                LocalAuthentication.hasHardwareAsync(),
+                LocalAuthentication.isEnrolledAsync(),
+            ]);
             const active = await getActiveUserDB();
-            if (active) {
-                set({ registeredUser: active.user });
 
-                // If biometric is enabled by user and hardware is ready, prompt unlock
-                if (active.user.isBiometricEnabled && canUseBiometrics) {
-                    const bioRes = await LocalAuthentication.authenticateAsync({
-                        promptMessage: `Unlock BanKoni for ${active.user.name}`,
-                        fallbackLabel: 'Use PIN',
-                        disableDeviceFallback: true,
-                    });
-
-                    if (bioRes.success) {
-                        set({ user: active.user });
-                        await get().loadAllData();
-                    } else {
-                        // Keep locked on PIN screen
-                        set({ user: null });
-                    }
-                } else {
-                    // Locked on PIN screen, profile cached
-                    set({ user: null });
-                }
-            } else {
-                set({ registeredUser: null, user: null });
-            }
+            set({
+                registeredUser: active?.user ?? null,
+                isBiometricSupported: hasHardware && enrolled,
+                transactions: [],
+                categories: [],
+                budgets: [],
+                wallets: [],
+            });
         } catch (error) {
-            console.error('Error during BanKoni checkAuth:', error);
-            set({ user: null, registeredUser: null });
+            // Do not reinterpret a database read failure as a first-time installation.
+            set({ authError: errorMessage(error, 'BanKoni could not open its local vault.') });
         } finally {
             set({ isLoadingAuth: false });
         }
     },
 
-    registerWithPin: async (name: string, pin: string, enableBiometrics?: boolean) => {
+    registerWithPin: async (name, pin, enableBiometrics = false, email) => {
         const cleanName = name.trim();
-        const cleanPin = pin.trim();
-        if (!/^\d{4,}$/.test(cleanPin)) {
-            throw new Error('PIN must be at least 4 digits');
+        const cleanEmail = email?.trim() || undefined;
+        if (cleanName.length < 2) throw new Error('Name must contain at least 2 characters.');
+        if (!validateNewPin(pin)) throw new Error('PIN must contain 6 to 12 numeric digits.');
+        if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+            throw new Error('Enter a valid email address or leave it empty.');
         }
-        const pinHash = await hashPin(cleanPin);
-        const newUser: User = {
-            id: `usr_${Date.now()}`,
-            name: cleanName,
+        if (get().registeredUser || get().user) {
+            throw new Error('A local vault already exists. Unlock it instead of creating another profile.');
+        }
 
-            isBiometricEnabled: Boolean(enableBiometrics),
+        await initDatabase();
+        const current = await getActiveUserDB();
+        if (current) {
+            set({ registeredUser: current.user });
+            throw new Error('A local vault already exists. Unlock it instead of creating another profile.');
+        }
+
+        let biometricEnabled = false;
+        if (enableBiometrics) {
+            const [hasHardware, enrolled] = await Promise.all([
+                LocalAuthentication.hasHardwareAsync(),
+                LocalAuthentication.isEnrolledAsync(),
+            ]);
+            if (!hasHardware || !enrolled) {
+                throw new Error('Biometrics are not available or not enrolled on this device.');
+            }
+            biometricEnabled = true;
+        }
+
+        const newUser: User = {
+            id: makeId('usr'),
+            name: cleanName,
+            email: cleanEmail,
+            isBiometricEnabled: biometricEnabled,
             createdAt: new Date().toISOString(),
         };
-        // Save to SQLite
+        const pinHash = await hashPin(pin);
         await saveUserDB(newUser, pinHash);
 
-
-        set({ user: newUser, registeredUser: newUser });
+        // Keep the profile discoverable if loading the first data snapshot fails;
+        // the user can return to the lock screen rather than creating a second vault.
+        set({ registeredUser: newUser });
         await get().loadAllData();
+        set({ user: newUser, registeredUser: newUser, authError: null, dataError: null });
     },
 
-    loginWithPin: async (pin: string): Promise<boolean> => {
-        const cleanPin = pin.trim();
+    loginWithPin: async (pin) => {
+        const attemptState = await getPinAttemptStateDB();
+        if (attemptState.lockoutUntilMs > Date.now()) {
+            const seconds = Math.ceil((attemptState.lockoutUntilMs - Date.now()) / 1000);
+            throw new Error(`Too many incorrect PIN attempts. Try again in ${seconds} seconds.`);
+        }
+
         const active = await getActiveUserDB();
         if (!active) return false;
-        const valid = await verifyPin(cleanPin, active.pinHash);
-        if (!valid) return false;
-        if (!isHashedPin(active.pinHash)) {
-            const upgradedHash = await hashPin(cleanPin);
+
+        const valid = await verifyPin(pin.trim(), active.pinHash);
+        if (!valid) {
+            const updatedAttempts = await recordFailedPinAttemptDB();
+            if (updatedAttempts.lockoutUntilMs > Date.now()) {
+                const seconds = Math.ceil((updatedAttempts.lockoutUntilMs - Date.now()) / 1000);
+                throw new Error(`Too many incorrect PIN attempts. Try again in ${seconds} seconds.`);
+            }
+            return false;
+        }
+        await resetPinAttemptStateDB();
+
+        // Upgrade both plaintext records and older scrypt parameter sets only after
+        // the entered PIN has been verified successfully.
+        if (!isCurrentPinHash(active.pinHash)) {
+            const upgradedHash = await hashPin(pin.trim());
             await updateUserPinHashDB(active.user.id, upgradedHash);
         }
-        set({ user: active.user, registeredUser: active.user });
+
         await get().loadAllData();
+        set({ user: active.user, registeredUser: active.user, authError: null, dataError: null });
         return true;
     },
 
-    loginWithBiometrics: async (): Promise<boolean> => {
+    loginWithBiometrics: async (): Promise<BiometricLoginResult> => {
         try {
             const active = await getActiveUserDB();
-            if (!active?.user.isBiometricEnabled) return false;
+            if (!active?.user.isBiometricEnabled) return { status: 'unavailable' };
 
-            const bioRes = await LocalAuthentication.authenticateAsync({
+            const [hasHardware, enrolled] = await Promise.all([
+                LocalAuthentication.hasHardwareAsync(),
+                LocalAuthentication.isEnrolledAsync(),
+            ]);
+            if (!hasHardware || !enrolled) return { status: 'unavailable' };
+
+            const result = await LocalAuthentication.authenticateAsync({
                 promptMessage: `Unlock BanKoni for ${active.user.name}`,
-                fallbackLabel: 'Enter PIN',
+                cancelLabel: 'Use PIN',
+                fallbackLabel: 'Use PIN',
                 disableDeviceFallback: true,
             });
 
-            if (bioRes.success) {
-                set({ user: active.user, registeredUser: active.user });
-                await get().loadAllData();
-                return true;
+            if (!result.success) {
+                const cancellable = new Set([
+                    'user_cancel', 'app_cancel', 'system_cancel', 'user_fallback', 'timeout',
+                ]);
+                if (cancellable.has(result.error)) return { status: 'cancelled' };
+                return { status: 'failed', message: 'Biometric verification was not successful. Use your PIN instead.' };
             }
-            return false;
+
+            await resetPinAttemptStateDB();
+            try {
+                await get().loadAllData();
+            } catch (error) {
+                return { status: 'error', message: errorMessage(error, 'The vault data could not be loaded.') };
+            }
+            set({ user: active.user, registeredUser: active.user, authError: null, dataError: null });
+            return { status: 'success' };
         } catch (error) {
-            console.warn('Biometric authentication failed:', error);
-            return false;
+            return { status: 'error', message: errorMessage(error, 'Biometric authentication could not be completed.') };
         }
     },
 
-    enableBiometrics: async (enabled: boolean) => {
+    enableBiometrics: async (enabled) => {
         const user = get().user;
-        if ((!user)) return;
+        if (!user) throw new Error('Unlock the vault before changing biometric settings.');
+
         if (enabled) {
-            const supported = await LocalAuthentication.hasHardwareAsync();
-            const enrolled = await LocalAuthentication.isEnrolledAsync();
-            if (!supported || !enrolled) {
-                throw new Error('Biometrics are not available');
-            }
+            const [hasHardware, enrolled] = await Promise.all([
+                LocalAuthentication.hasHardwareAsync(),
+                LocalAuthentication.isEnrolledAsync(),
+            ]);
+            if (!hasHardware || !enrolled) throw new Error('Biometrics are not available on this device.');
+
             const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: 'Confirm Biometeric unlock',
+                promptMessage: 'Confirm biometric unlock for BanKoni',
+                cancelLabel: 'Cancel',
                 disableDeviceFallback: true,
             });
-            if (!result.success) {
-                throw new Error('Biometeric Verification failed');
-            }
+            if (!result.success) throw new Error('Biometric verification was cancelled or failed.');
         }
-        await setBiometricEnabledDB(user.id, enabled);
-        set({
-            user: {
-                ...user,
-                isBiometricEnabled: enabled,
-            },
-        });
 
+        await setBiometricEnabledDB(user.id, enabled);
+        const updatedUser = { ...user, isBiometricEnabled: enabled };
+        set({
+            user: updatedUser,
+            registeredUser: get().registeredUser?.id === user.id ? updatedUser : get().registeredUser,
+            isBiometricSupported: enabled ? true : get().isBiometricSupported,
+        });
     },
 
     logOut: async () => {
-        // Locks the app: user profile stays in SQLite, active session locks to PIN screen
-        set({ user: null });
+        // Preserve SQLite records. Clear this session's copies from memory.
+        set({
+            user: null,
+            transactions: [],
+            categories: [],
+            budgets: [],
+            wallets: [],
+            dataError: null,
+            isLoadingData: false,
+        });
     },
 
-    setUser: (user) => set({ user }),
+    // Compatibility setter: it may lock an existing session, but cannot create an
+    // authenticated session from an arbitrary object. Authentication actions own that transition.
+    setUser: (user) => {
+        if (user === null) {
+            void get().logOut();
+            return;
+        }
+        if (get().user?.id === user.id) set({ user: { ...get().user!, ...user } });
+    },
 
-    // Backwards-compatible adapters for older callers
-    login: async (emailOrPin: string, pincode?: string) => {
-        const pinToTry = (pincode && pincode.length === 4) ? pincode : emailOrPin;
-        await get().loginWithPin(pinToTry);
+    login: async (emailOrPin, pincode) => {
+        const pin = pincode ?? emailOrPin;
+        const success = await get().loginWithPin(pin);
+        if (!success) throw new Error('Incorrect PIN or no vault is registered.');
     },
 
     register: async (name, pincode) => {
-        if (!pincode) {
-            throw new Error('A PIN is required to register.');
-        }
-        await get().registerWithPin(name, pincode,);
+        await get().registerWithPin(name, pincode, false);
     },
 
-    // ── Data Loading ──
     loadAllData: async () => {
-        set({ isLoadingData: true });
+        set({ isLoadingData: true, dataError: null });
         try {
-            const [txs, cats, budgets, wallets] = await Promise.all([
-                getTransactionsDB(),
-                getCategoriesDB(),
-                getBudgetsDB(),
-                getWalletsDB(),
-            ]);
-            set({
-                transactions: txs,
-                categories: cats,
-                budgets,
-                wallets,
-            });
+            const data = await readAllFinancialData();
+            set({ ...data, dataError: null });
         } catch (error) {
-            console.error('Error loading SQLite data:', error);
+            const message = errorMessage(error, 'Financial data could not be loaded.');
+            set({ dataError: message });
+            throw new Error(message);
         } finally {
             set({ isLoadingData: false });
         }
     },
 
-    fetchTransactions: async () => {
-        const txs = await getTransactionsDB();
-        set({ transactions: txs });
-    },
+    fetchTransactions: async () => set({ transactions: await getTransactionsDB() }),
+    fetchBudgets: async () => set({ budgets: await getBudgetsDB() }),
+    fetchCategories: async () => set({ categories: await getCategoriesDB() }),
+    fetchWallets: async () => set({ wallets: await getWalletsDB() }),
 
-    fetchBudgets: async () => {
-        const budgets = await getBudgetsDB();
-        set({ budgets });
-    },
-
-    fetchCategories: async () => {
-        const cats = await getCategoriesDB();
-        set({ categories: cats });
-    },
-
-    fetchWallets: async () => {
-        const wallets = await getWalletsDB();
-        set({ wallets });
-    },
-
-    // ── Transaction CRUD (SQLite-backed) ──
     addTransaction: async (tx) => {
-        const fullTx: Transaction = {
+        const fullTransaction: Transaction = {
             ...tx,
-            id: 'id' in tx && tx.id ? tx.id : `tx_${Date.now()}`,
+            id: 'id' in tx && tx.id ? tx.id : makeId('tx'),
             createdAt: 'createdAt' in tx && tx.createdAt ? tx.createdAt : new Date().toISOString(),
         };
-        await insertTransactionDB(fullTx);
-        set((state) => ({ transactions: [fullTx, ...state.transactions] }));
+        await insertTransactionDB(fullTransaction);
+        const data = await readTransactionsAndWallets();
+        set(data);
     },
 
     updateTransaction: async (id, updated) => {
         await updateTransactionDB(id, updated);
-        set((state) => ({
-            transactions: state.transactions.map((t) => (t.id === id ? { ...t, ...updated } : t)),
-        }));
+        const data = await readTransactionsAndWallets();
+        set(data);
     },
 
     deleteTransaction: async (id) => {
         await deleteTransactionDB(id);
-        set((state) => ({
-            transactions: state.transactions.filter((t) => t.id !== id),
-        }));
+        const data = await readTransactionsAndWallets();
+        set(data);
     },
 
-    // ── Budget CRUD (SQLite-backed) ──
     addBudget: async (budget) => {
         const fullBudget: Budget = {
             ...budget,
-            id: 'id' in budget && budget.id ? budget.id : `b_${Date.now()}`,
+            id: 'id' in budget && budget.id ? budget.id : makeId('budget'),
         };
         await insertBudgetDB(fullBudget);
-        set((state) => ({ budgets: [fullBudget, ...state.budgets] }));
+        set({ budgets: await getBudgetsDB() });
     },
 
     updateBudget: async (id, updated) => {
         await updateBudgetDB(id, updated);
-        set((state) => ({
-            budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...updated } : b)),
-        }));
+        set({ budgets: await getBudgetsDB() });
     },
 
     deleteBudget: async (id) => {
         await deleteBudgetDB(id);
-        set((state) => ({
-            budgets: state.budgets.filter((b) => b.id !== id),
-        }));
+        set({ budgets: await getBudgetsDB() });
     },
 
-    // ── Categories & Wallets CRUD ──
-    addCategory: async (cat) => {
-        const fullCat: Category = {
-            ...cat,
-            id: `cat_custom_${Date.now()}`,
-        };
-        await insertCategoryDB(fullCat);
-        set((state) => ({ categories: [...state.categories, fullCat] }));
+    addCategory: async (category) => {
+        const fullCategory: Category = { ...category, id: makeId('category') };
+        await insertCategoryDB(fullCategory);
+        set({ categories: await getCategoriesDB() });
     },
 
     deleteCategory: async (id) => {
         await deleteCategoryDB(id);
-        set((state) => ({
-            categories: state.categories.filter((c) => c.id !== id || c.isBuiltIn),
-        }));
+        set({ categories: await getCategoriesDB() });
     },
 
     addWallet: async (wallet) => {
         const fullWallet: Wallet = {
             ...wallet,
-            id: `wallet_${Date.now()}`,
+            id: makeId('wallet'),
             createdAt: new Date().toISOString(),
         };
         await insertWalletDB(fullWallet);
-        set((state) => ({ wallets: [...state.wallets, fullWallet] }));
+        set({ wallets: await getWalletsDB() });
     },
 
     deleteWallet: async (id) => {
         await deleteWalletDB(id);
-        set((state) => ({
-            wallets: state.wallets.filter((w) => w.id !== id),
-        }));
+        set({ wallets: await getWalletsDB() });
     },
 
-    // ── Telegram Bot / Export Pipeline ──
-    getExportPayload: async (): Promise<ExportDataPayload> => {
-        return await exportDatabaseToJSON();
-    },
+    getExportPayload: async () => exportDatabaseToJSON(),
 
-    exportDataToJSONFile: async (): Promise<string | null> => {
+    exportDataToJSONFile: async () => {
         try {
             const data = await exportDatabaseToJSON();
             const jsonString = JSON.stringify(data, null, 2);
-            const fileName = `BanKoni_export_vault_${Date.now()}.json`;
-            const baseDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
-            const filePath = `${baseDir}${fileName}`;
+            const fileName = `BanKoni_export_${Date.now()}.json`;
+            const baseDirectory = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+            if (!baseDirectory) throw new Error('No writable directory is available for the export.');
+            const filePath = `${baseDirectory}${fileName}`;
+
             await FileSystem.writeAsStringAsync(filePath, jsonString, {
                 encoding: FileSystem.EncodingType.UTF8,
             });
+
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(filePath, {
                     mimeType: 'application/json',
-                    dialogTitle: 'Exporting Bankoni Vault for Telegram Bot',
+                    dialogTitle: 'Export BanKoni data',
                     UTI: 'public.json',
                 });
             }
             return fileName;
         } catch (error) {
-            console.error('Error exporting BanKoni data:', error);
-            return null;
+            console.error('BanKoni export failed:', error);
+            throw new Error(errorMessage(error, 'The data export failed.'));
         }
     },
 
-    // ── Computed Getters ──
-    totalIncome: () => {
-        return get()
-            .transactions.filter((tx) => tx.type === 'CREDIT')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-    },
+    totalIncome: () => getEtbClearedTransactions(get()).reduce(
+        (sum, transaction) => sum + (transaction.type === 'CREDIT' ? transaction.amount : 0),
+        0,
+    ),
 
-    totalExpenses: () => {
-        return get()
-            .transactions.filter((tx) => tx.type === 'DEBIT')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-    },
+    totalExpenses: () => getEtbClearedTransactions(get()).reduce(
+        (sum, transaction) => sum + (transaction.type === 'DEBIT' ? transaction.amount : 0),
+        0,
+    ),
 
-    totalBalance: () => {
-        return get().totalIncome() - get().totalExpenses();
-    },
+    totalBalance: () => get().wallets
+        .filter((wallet) => wallet.currency === 'ETB')
+        .reduce((sum, wallet) => sum + wallet.balance, 0),
 
-    transactionByCategory: () => {
-        return get()
-            .transactions.filter((tx) => tx.type === 'DEBIT')
-            .reduce(
-                (acc, tx) => {
-                    acc[tx.categoryId] = (acc[tx.categoryId] || 0) + tx.amount;
-                    return acc;
-                },
-                {} as Record<string, number>
-            );
-    },
+    transactionByCategory: () => getEtbClearedTransactions(get()).reduce<Record<string, number>>(
+        (totals, transaction) => {
+            if (transaction.type === 'DEBIT') {
+                totals[transaction.categoryId] = (totals[transaction.categoryId] ?? 0) + transaction.amount;
+            }
+            return totals;
+        },
+        {},
+    ),
 
-    toggleTheme: () =>
-        set((state) => ({
-            theme: state.theme === 'light' ? 'dark' : 'light',
-        })),
+    toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
 }));
 
 export default useBanKoniStore;
